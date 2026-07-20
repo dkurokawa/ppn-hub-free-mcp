@@ -1,0 +1,60 @@
+# ppn-hub-free-mcp — keyless read-only MCP proxy for mcp.ppn-hub.com.
+#
+# Deploys are MANUAL (`pnpm run deploy`) — this repo is not covered by the
+# ppn-mono CI pipeline. See README.md for the full deploy checklist
+# (KV namespace, secrets, DNS).
+
+name = "ppn-hub-free-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+workers_dev = false
+
+account_id = "fdf6dd4d81864fb35f6fd179fdeadc86"
+
+[vars]
+UPSTREAM_MCP_URL = "https://mcp.ppn-hub.com/mcp"
+# Daily budgets in "units": most requests cost 1, environment_brief costs 10.
+FREE_IP_DAY_LIMIT = "100"
+FREE_GLOBAL_DAY_LIMIT = "5000"
+
+# Per-IP burst limiter (Cloudflare-native, GA `[[ratelimits]]` syntax — the old
+# `[[unsafe.bindings]]` form deploys as inert metadata and silently fails open).
+[[ratelimits]]
+name = "IP_RATE_LIMITER"
+namespace_id = "4052"
+simple = { limit = 10, period = 60 }
+
+# KV: daily budgets, abuse counters, temp ban list.
+# Create the namespace before the first deploy and paste the id here:
+#   pnpm exec wrangler kv namespace create FREE_KV
+[[kv_namespaces]]
+binding = "FREE_KV"
+id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
+
+# ── Production ──
+[env.production]
+name = "ppn-hub-free-mcp"
+workers_dev = true
+routes = [
+  { pattern = "mcp-free.ppn-hub.com/*", zone_id = "046d146fe66bb5a2f61ed6e938c8db6c" }
+]
+
+# Per-env tables do not inherit from top-level; mirror everything.
+[env.production.vars]
+UPSTREAM_MCP_URL = "https://mcp.ppn-hub.com/mcp"
+FREE_IP_DAY_LIMIT = "100"
+FREE_GLOBAL_DAY_LIMIT = "5000"
+
+[[env.production.ratelimits]]
+name = "IP_RATE_LIMITER"
+namespace_id = "4052"
+simple = { limit = 10, period = 60 }
+
+[[env.production.kv_namespaces]]
+binding = "FREE_KV"
+id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
+
+# Secrets (set via `wrangler secret put`, never committed):
+#   FREE_TIER_BACKEND_KEY — dedicated ppn_live_* key the proxy injects for
+#     allowlisted GET calls. Never a service/admin key.
+#   IP_HASH_SALT — random 32B salt for hashing client IPs before they touch KV.

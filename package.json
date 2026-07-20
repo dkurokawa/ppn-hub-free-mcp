@@ -1,0 +1,28 @@
+{
+  "name": "ppn-hub-free-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Keyless read-only MCP entry point for PPN Hub — a thin rate-limited proxy in front of mcp.ppn-hub.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dkurokawa/ppn-hub-free-mcp"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --env production",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "gen-allowlist": "node scripts/gen-allowlist.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.12.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260116.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.59.0"
+  }
+}

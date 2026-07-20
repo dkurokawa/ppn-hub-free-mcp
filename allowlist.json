@@ -1,0 +1,1829 @@
+{
+  "generated_at": "2026-07-20T11:46:31.987Z",
+  "source": "https://mcp.ppn-hub.com/mcp (anonymous search_apis sweep)",
+  "api_count": 61,
+  "endpoint_count": 364,
+  "excluded": [],
+  "allow": [
+    {
+      "api": "amenity-production",
+      "operationId": "getCategories",
+      "path": "/categories"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getCategoriesId",
+      "path": "/categories/{id}"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getCategoriesTypesAll",
+      "path": "/categories/types/all"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getFacilitiesCount",
+      "path": "/facilities/count"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getFacilitiesId",
+      "path": "/facilities/{id}"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getFacilitiesNearbyType",
+      "path": "/facilities/nearby/{type}"
+    },
+    {
+      "api": "amenity-production",
+      "operationId": "getFacilitiesSearch",
+      "path": "/facilities/search"
+    },
+    {
+      "api": "artia",
+      "operationId": "getArtistsId",
+      "path": "/api/v1/artists/{id}"
+    },
+    {
+      "api": "artia",
+      "operationId": "getArtistsSearch",
+      "path": "/api/v1/artists/search"
+    },
+    {
+      "api": "artia",
+      "operationId": "getArtworksId",
+      "path": "/api/v1/artworks/{id}"
+    },
+    {
+      "api": "artia",
+      "operationId": "getArtworksNearby",
+      "path": "/api/v1/artworks/nearby"
+    },
+    {
+      "api": "artia",
+      "operationId": "getArtworksSearch",
+      "path": "/api/v1/artworks/search"
+    },
+    {
+      "api": "artia",
+      "operationId": "getExhibitionsTouring",
+      "path": "/api/v1/exhibitions/touring"
+    },
+    {
+      "api": "artia",
+      "operationId": "getMuseumsIdCollection",
+      "path": "/api/v1/museums/{id}/collection"
+    },
+    {
+      "api": "artia",
+      "operationId": "getMuseumsSearch",
+      "path": "/api/v1/museums/search"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getAirQuality",
+      "path": "/api/v1/air-quality"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getAirQualityGeoJson",
+      "path": "/api/v1/air-quality.geojson"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getAirQualityStatistics",
+      "path": "/api/v1/history/statistics"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getAtmosphericTransmittance",
+      "path": "/api/v1/atmospheric-transmittance"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getAtmosphericVisibility",
+      "path": "/api/v1/atmosphere/visibility"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getFrostRisk",
+      "path": "/api/v1/frost-risk"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getHeatIsland",
+      "path": "/api/v1/heat-island"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getLicenseUsage",
+      "path": "/api/v1/license/usage"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getMicroclimate",
+      "path": "/api/v1/microclimate"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getMicroclimateDiurnal",
+      "path": "/api/v1/microclimate/diurnal"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getMicroclimateGeoJson",
+      "path": "/api/v1/microclimate.geojson"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getPar",
+      "path": "/api/v1/par"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getPollenRisk",
+      "path": "/api/v1/pollen-risk"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getSkyColorProfile",
+      "path": "/api/v1/sky/color-profile"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getSolarRadiation",
+      "path": "/api/v1/solar-radiation"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getSunPosition",
+      "path": "/api/v1/lighting/sun-position"
+    },
+    {
+      "api": "atmos",
+      "operationId": "getWindPattern",
+      "path": "/api/v1/wind-pattern"
+    },
+    {
+      "api": "atmos",
+      "operationId": "listAirQualityAlerts",
+      "path": "/api/v1/history/alerts"
+    },
+    {
+      "api": "atmos",
+      "operationId": "listAirQualityHistory",
+      "path": "/api/v1/history/air-quality"
+    },
+    {
+      "api": "atmos",
+      "operationId": "listObservationStations",
+      "path": "/api/v1/history/stations"
+    },
+    {
+      "api": "atmos",
+      "operationId": "listSmogEvents",
+      "path": "/api/v1/history/smog-events"
+    },
+    {
+      "api": "atmos",
+      "operationId": "listUnhealthyEpisodes",
+      "path": "/api/v1/history/unhealthy"
+    },
+    {
+      "api": "atmos",
+      "operationId": "streamAirQuality",
+      "path": "/api/v1/stream/air-quality"
+    },
+    {
+      "api": "atmos",
+      "operationId": "streamWeather",
+      "path": "/api/v1/stream/weather"
+    },
+    {
+      "api": "biocolo",
+      "operationId": "getDispersalMechanisms",
+      "path": "/api/v1/dispersal-mechanisms"
+    },
+    {
+      "api": "biocolo",
+      "operationId": "getSuccessionStages",
+      "path": "/api/v1/succession-stages"
+    },
+    {
+      "api": "biolexia-production",
+      "operationId": "getHealthV1",
+      "path": "/v1/health"
+    },
+    {
+      "api": "biolexia-production",
+      "operationId": "getPaper",
+      "path": "/v1/papers/{id}"
+    },
+    {
+      "api": "biolexia-production",
+      "operationId": "listPapers",
+      "path": "/v1/papers"
+    },
+    {
+      "api": "biositia",
+      "operationId": "assessPointRisk",
+      "path": "/v1/biositing/risk"
+    },
+    {
+      "api": "biositia",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "biositia",
+      "operationId": "getPrioritySitesSummary",
+      "path": "/v1/sites/priority/summary"
+    },
+    {
+      "api": "biositia",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "biositia",
+      "operationId": "listPrioritySites",
+      "path": "/v1/sites/priority"
+    },
+    {
+      "api": "biota",
+      "operationId": "getHabitats",
+      "path": "/api/v1/habitats"
+    },
+    {
+      "api": "biota",
+      "operationId": "getInteractions",
+      "path": "/api/v1/interactions"
+    },
+    {
+      "api": "biota",
+      "operationId": "getPerformance",
+      "path": "/performance"
+    },
+    {
+      "api": "biota",
+      "operationId": "getSpecies",
+      "path": "/api/v1/species"
+    },
+    {
+      "api": "biota",
+      "operationId": "getSpeciesId",
+      "path": "/api/v1/species/:id"
+    },
+    {
+      "api": "carbon-credit",
+      "operationId": "getHealthLegacy",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "carbon-credit",
+      "operationId": "getPerformance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getCatalogObject",
+      "path": "/api/v1/catalog/{id}"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getCelestialAlignment",
+      "path": "/api/v1/celestial/{body}/alignment"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getCelestialEphemeris",
+      "path": "/api/v1/celestial/{body}/ephemeris"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getConstellationAtlas",
+      "path": "/api/v1/catalog/atlas"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getEcliptic",
+      "path": "/api/v1/catalog/ecliptic"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getMoonAlignment",
+      "path": "/api/v1/moon/alignment"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getMoonEphemeris",
+      "path": "/api/v1/moon/ephemeris"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getMoonPosition",
+      "path": "/api/v1/moon/position"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getObservationConditions",
+      "path": "/api/v1/observation/conditions"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getPlanetPosition",
+      "path": "/api/v1/planets/{planet}/position"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getSunPosition",
+      "path": "/api/v1/sun/position"
+    },
+    {
+      "api": "celestora",
+      "operationId": "getTonightEvents",
+      "path": "/api/v1/events/tonight"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listComets",
+      "path": "/api/v1/catalog/comets"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listConstellations",
+      "path": "/api/v1/catalog/constellations"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listMessier",
+      "path": "/api/v1/catalog/messier"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listSatellites",
+      "path": "/api/v1/catalog/satellites"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listStars",
+      "path": "/api/v1/catalog/stars"
+    },
+    {
+      "api": "celestora",
+      "operationId": "listUpcomingEvents",
+      "path": "/api/v1/events/upcoming"
+    },
+    {
+      "api": "celestora",
+      "operationId": "searchCatalog",
+      "path": "/api/v1/catalog/search"
+    },
+    {
+      "api": "chronomap",
+      "operationId": "getSnapshot",
+      "path": "/api/v1/snapshot"
+    },
+    {
+      "api": "chronomap",
+      "operationId": "getSources",
+      "path": "/api/v1/sources"
+    },
+    {
+      "api": "cost-compare",
+      "operationId": "getCostCompareApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "cost-compare",
+      "operationId": "getCostCompareApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "craftia",
+      "operationId": "findNearbyWorkshops",
+      "path": "/api/v1/workshops/nearby"
+    },
+    {
+      "api": "craftia",
+      "operationId": "getArtisanById",
+      "path": "/api/v1/artisans/{id}"
+    },
+    {
+      "api": "craftia",
+      "operationId": "getCraftById",
+      "path": "/api/v1/crafts/{id}"
+    },
+    {
+      "api": "craftia",
+      "operationId": "getUnescoCrafts",
+      "path": "/api/v1/crafts/unesco"
+    },
+    {
+      "api": "craftia",
+      "operationId": "searchArtisans",
+      "path": "/api/v1/artisans/search"
+    },
+    {
+      "api": "craftia",
+      "operationId": "searchCrafts",
+      "path": "/api/v1/crafts/search"
+    },
+    {
+      "api": "craftia",
+      "operationId": "searchWorkshops",
+      "path": "/api/v1/workshops/search"
+    },
+    {
+      "api": "crime",
+      "operationId": "getRoot",
+      "path": "/api/v1"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getDnaFragment",
+      "path": "/api/v1/dna/{id}"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getDnaStatsSummary",
+      "path": "/api/v1/dna/stats/summary"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getFossilPaleoecology",
+      "path": "/api/v1/fossils/{taxonName}/paleoecology"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getFossilPaleoecologySummary",
+      "path": "/api/v1/fossils/{taxonName}/paleoecology/summary"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getSpecimen",
+      "path": "/api/v1/specimens/{id}"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "getSpecimenStatsSummary",
+      "path": "/api/v1/specimens/stats/summary"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "listDnaFragments",
+      "path": "/api/v1/dna"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "cryonia",
+      "operationId": "listSpecimens",
+      "path": "/api/v1/specimens"
+    },
+    {
+      "api": "demand-forecast",
+      "operationId": "getDemandForecastApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "demand-forecast",
+      "operationId": "getDemandForecastApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "disease",
+      "operationId": "getRoot",
+      "path": "/api/v1"
+    },
+    {
+      "api": "earth-geodata",
+      "operationId": "getBiomePoint",
+      "path": "/v1/biome/point"
+    },
+    {
+      "api": "earth-geodata",
+      "operationId": "getBiomeVersion",
+      "path": "/v1/biome/version.json"
+    },
+    {
+      "api": "earth-geodata",
+      "operationId": "getGlobalBiomeIndex",
+      "path": "/v1/biome/global.json"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaAdvancedPeriod",
+      "path": "/fauna/advanced-period"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaExtant",
+      "path": "/fauna/extant"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaExtinct",
+      "path": "/fauna/extinct"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaId",
+      "path": "/fauna/{id}"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaPeriodPeriod",
+      "path": "/fauna/period/{period}"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaTaxonNameInteractions",
+      "path": "/fauna/{taxonName}/interactions"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaTaxonNameInteractionsSummary",
+      "path": "/fauna/{taxonName}/interactions/summary"
+    },
+    {
+      "api": "faunaunify",
+      "operationId": "getFaunaTimeline",
+      "path": "/fauna/timeline"
+    },
+    {
+      "api": "festivia",
+      "operationId": "findNearbyFestivals",
+      "path": "/api/v1/festivals/nearby"
+    },
+    {
+      "api": "festivia",
+      "operationId": "getFestivalById",
+      "path": "/api/v1/festivals/{id}"
+    },
+    {
+      "api": "festivia",
+      "operationId": "getFestivalCalendar",
+      "path": "/api/v1/festivals/calendar"
+    },
+    {
+      "api": "festivia",
+      "operationId": "getFestivalsThisMonth",
+      "path": "/api/v1/festivals/this-month"
+    },
+    {
+      "api": "festivia",
+      "operationId": "getUpcomingFestivals",
+      "path": "/api/v1/festivals/upcoming"
+    },
+    {
+      "api": "festivia",
+      "operationId": "searchFestivals",
+      "path": "/api/v1/festivals/search"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "getCareReminders",
+      "path": "/v1/care-reminders"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "getDashboard",
+      "path": "/v1/dashboard"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "getSeasonalTasks",
+      "path": "/v1/seasonal-tasks"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "getWeatherCare",
+      "path": "/v1/weather-care"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "listAreas",
+      "path": "/v1/areas"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "listCareLogs",
+      "path": "/v1/care-logs"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "listFarms",
+      "path": "/v1/farms"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "listInventory",
+      "path": "/v1/inventory"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "listPlants",
+      "path": "/v1/plants"
+    },
+    {
+      "api": "green-path-api",
+      "operationId": "searchPlantUnify",
+      "path": "/v1/plant-unify"
+    },
+    {
+      "api": "grid-connect",
+      "operationId": "getGridConnectApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "grid-connect",
+      "operationId": "getGridConnectApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "hydrogen",
+      "operationId": "getCacheStats",
+      "path": "/v1/cache/stats"
+    },
+    {
+      "api": "hydrogen",
+      "operationId": "getUsage",
+      "path": "/v1/usage"
+    },
+    {
+      "api": "hydrogen",
+      "operationId": "getUsageLimits",
+      "path": "/v1/usage/limits"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getFloodRisk",
+      "path": "/api/v1/river/flood-risk"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getHistoryStatistics",
+      "path": "/api/v1/history/statistics"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getOceanCurrent",
+      "path": "/api/v1/ocean/current"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getOceanTemperature",
+      "path": "/api/v1/ocean/temperature"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getRiverFlow",
+      "path": "/api/v1/river/flow"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getTide",
+      "path": "/api/v1/ocean/tide"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getWatershed",
+      "path": "/api/v1/river/watershed"
+    },
+    {
+      "api": "hydros",
+      "operationId": "getWaves",
+      "path": "/api/v1/ocean/waves"
+    },
+    {
+      "api": "hydros",
+      "operationId": "listFloodEvents",
+      "path": "/api/v1/history/flood-events"
+    },
+    {
+      "api": "hydros",
+      "operationId": "listObservationStations",
+      "path": "/api/v1/history/stations"
+    },
+    {
+      "api": "hydros",
+      "operationId": "listRiverFlowHistory",
+      "path": "/api/v1/history/flow"
+    },
+    {
+      "api": "hydros",
+      "operationId": "listTideHistory",
+      "path": "/api/v1/history/tides"
+    },
+    {
+      "api": "hydros",
+      "operationId": "listWaterLevelHistory",
+      "path": "/api/v1/history/water-levels"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getAdminHealth",
+      "path": "/admin/health"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getCrawlerStats",
+      "path": "/admin/crawler/stats"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getCrawlerStatus",
+      "path": "/admin/crawler/status"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getHealthDb",
+      "path": "/health/db"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getHealthNeon",
+      "path": "/health/neon"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getInsect",
+      "path": "/v1/insects/{urn}"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "getPerformance",
+      "path": "/performance"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "listFamilies",
+      "path": "/v1/taxonomy/families"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "listHostRelationProfiles",
+      "path": "/v1/profiles/host-relations"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "listLifeStageProfiles",
+      "path": "/v1/profiles/life-stages"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "listOrders",
+      "path": "/v1/taxonomy/orders"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchBeneficials",
+      "path": "/v1/beneficials"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchInsects",
+      "path": "/v1/insects"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchMyrmecophiles",
+      "path": "/v1/myrmecophiles"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchPests",
+      "path": "/v1/pests"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchPollinators",
+      "path": "/v1/pollinators"
+    },
+    {
+      "api": "insectunify",
+      "operationId": "searchVectors",
+      "path": "/v1/vectors"
+    },
+    {
+      "api": "laboria",
+      "operationId": "getLaboriaApiV1CountriesHighRisk",
+      "path": "/api/v1/countries/high-risk"
+    },
+    {
+      "api": "laboria",
+      "operationId": "getLaboriaApiV1IndustriesHighRisk",
+      "path": "/api/v1/industries/high-risk"
+    },
+    {
+      "api": "laboria",
+      "operationId": "getLaboriaReady",
+      "path": "/ready"
+    },
+    {
+      "api": "literatia",
+      "operationId": "getInteractions",
+      "path": "/api/v1/interactions"
+    },
+    {
+      "api": "literatia",
+      "operationId": "getInteractionStats",
+      "path": "/api/v1/interactions/stats"
+    },
+    {
+      "api": "lithos",
+      "operationId": "assessSuitability",
+      "path": "/terroir/suitability"
+    },
+    {
+      "api": "lithos",
+      "operationId": "compareRegions",
+      "path": "/terroir/compare"
+    },
+    {
+      "api": "lithos",
+      "operationId": "getFactors",
+      "path": "/terroir/factors"
+    },
+    {
+      "api": "lithos",
+      "operationId": "getVolcanoActivity",
+      "path": "/volcano/activity"
+    },
+    {
+      "api": "lithos",
+      "operationId": "getVolcanoPreparedness",
+      "path": "/volcano/preparedness"
+    },
+    {
+      "api": "lithos",
+      "operationId": "listSoilComponents",
+      "path": "/soil/components"
+    },
+    {
+      "api": "marketo",
+      "operationId": "findNearbyMarkets",
+      "path": "/api/v1/markets/nearby"
+    },
+    {
+      "api": "marketo",
+      "operationId": "getMarketById",
+      "path": "/api/v1/markets/{id}"
+    },
+    {
+      "api": "marketo",
+      "operationId": "getMarketsBySchedule",
+      "path": "/api/v1/markets/schedule"
+    },
+    {
+      "api": "marketo",
+      "operationId": "getMarketVendors",
+      "path": "/api/v1/markets/{id}/vendors"
+    },
+    {
+      "api": "marketo",
+      "operationId": "searchBySpecialty",
+      "path": "/api/v1/specialties/search"
+    },
+    {
+      "api": "marketo",
+      "operationId": "searchMarkets",
+      "path": "/api/v1/markets/search"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getApiInfo",
+      "path": "/api/v1"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getDeposit",
+      "path": "/api/v1/deposits/{id}"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getDepositStats",
+      "path": "/api/v1/deposits/stats/summary"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getFormation",
+      "path": "/api/v1/geology/{id}"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getPerformance",
+      "path": "/performance"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getProductionStats",
+      "path": "/api/v1/resources/stats/production"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getResource",
+      "path": "/api/v1/resources/{id}"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getResourceJogmec",
+      "path": "/api/v1/resources/{id}/jogmec"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getStaticFile",
+      "path": "/static/{filename}"
+    },
+    {
+      "api": "mineral",
+      "operationId": "getStratigraphy",
+      "path": "/api/v1/geology/stratigraphy"
+    },
+    {
+      "api": "mineral",
+      "operationId": "listDeposits",
+      "path": "/api/v1/deposits"
+    },
+    {
+      "api": "mineral",
+      "operationId": "listFormations",
+      "path": "/api/v1/geology"
+    },
+    {
+      "api": "mineral",
+      "operationId": "listResources",
+      "path": "/api/v1/resources"
+    },
+    {
+      "api": "mineral",
+      "operationId": "searchByAge",
+      "path": "/api/v1/geology/search/age"
+    },
+    {
+      "api": "mineral",
+      "operationId": "searchByResourceType",
+      "path": "/api/v1/resources/search/type/{type}"
+    },
+    {
+      "api": "mineral",
+      "operationId": "searchDepositsByLocation",
+      "path": "/api/v1/deposits/search/location"
+    },
+    {
+      "api": "nanosnap-auction-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-auction-production",
+      "operationId": "listListings",
+      "path": "/v1/listings"
+    },
+    {
+      "api": "nanosnap-gacha-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-gacha-production",
+      "operationId": "getPlayerHistory",
+      "path": "/v1/pools/{poolId}/history/{playerId}"
+    },
+    {
+      "api": "nanosnap-gacha-production",
+      "operationId": "getPool",
+      "path": "/v1/pools/{poolId}"
+    },
+    {
+      "api": "nanosnap-inventory-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-inventory-production",
+      "operationId": "getPlayerInventory",
+      "path": "/player/{playerId}"
+    },
+    {
+      "api": "nanosnap-inventory-production",
+      "operationId": "listRecipes",
+      "path": "/recipes"
+    },
+    {
+      "api": "nanosnap-leaderboard-production",
+      "operationId": "getBoard",
+      "path": "/v1/boards/{boardId}"
+    },
+    {
+      "api": "nanosnap-leaderboard-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-leaderboard-production",
+      "operationId": "getPlayerRank",
+      "path": "/v1/boards/{boardId}/rank/{playerId}"
+    },
+    {
+      "api": "nanosnap-mailbox-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-mailbox-production",
+      "operationId": "getInbox",
+      "path": "/v1/inbox/{playerId}"
+    },
+    {
+      "api": "nanosnap-persona-gateway-production",
+      "operationId": "getConversationHistory",
+      "path": "/v1/personas/{personaId}/history/{playerId}"
+    },
+    {
+      "api": "nanosnap-persona-gateway-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-presence-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-presence-production",
+      "operationId": "getOnlinePlayers",
+      "path": "/v1/online"
+    },
+    {
+      "api": "nanosnap-presence-production",
+      "operationId": "getPlayerStatus",
+      "path": "/v1/status/{playerId}"
+    },
+    {
+      "api": "nanosnap-replay-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-replay-production",
+      "operationId": "getRecording",
+      "path": "/v1/recordings/{recordingId}"
+    },
+    {
+      "api": "nanosnap-replay-production",
+      "operationId": "listRecordings",
+      "path": "/v1/recordings"
+    },
+    {
+      "api": "nanosnap-replay-production",
+      "operationId": "matchGhosts",
+      "path": "/v1/ghosts/match"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "connectRoomWebSocket",
+      "path": "/room/{roomId}/ws"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "getRoomInfo",
+      "path": "/room/{roomId}"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "getTicketStatus",
+      "path": "/v1/matchmake/{ticketId}"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "listActiveRooms",
+      "path": "/rooms"
+    },
+    {
+      "api": "nanosnap-room-production",
+      "operationId": "listMatchmakingRooms",
+      "path": "/v1/matchmake/rooms"
+    },
+    {
+      "api": "nanosnap-save-data-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-save-data-production",
+      "operationId": "getSave",
+      "path": "/v1/saves/{playerId}/{slot}"
+    },
+    {
+      "api": "nanosnap-save-data-production",
+      "operationId": "listSaves",
+      "path": "/v1/saves/{playerId}"
+    },
+    {
+      "api": "nanosnap-spatial-message-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-spatial-message-production",
+      "operationId": "queryMessages",
+      "path": "/v1/messages"
+    },
+    {
+      "api": "nanosnap-world-counter-production",
+      "operationId": "getCounter",
+      "path": "/counter/{eventId}"
+    },
+    {
+      "api": "nanosnap-world-counter-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-world-counter-production",
+      "operationId": "getLeaderboard",
+      "path": "/counter/{eventId}/leaderboard"
+    },
+    {
+      "api": "nanosnap-world-objects-production",
+      "operationId": "getEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "nanosnap-world-objects-production",
+      "operationId": "queryObjects",
+      "path": "/v1/objects"
+    },
+    {
+      "api": "noise",
+      "operationId": "getRoot",
+      "path": "/api/v1"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getAccount",
+      "path": "/api/account"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getElevation",
+      "path": "/api/v1/elevation"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getElevationGrid",
+      "path": "/api/v1/elevation/grid"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getElevationHistory",
+      "path": "/monitoring/history/{id}"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getLegacyElevation",
+      "path": "/api/v1/legacy/elevation"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getSecurityAuditHistory",
+      "path": "/api/admin/security-audit/history"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "getVolcanoElevationHistory",
+      "path": "/monitoring/volcanoes/history/{name}"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listLiveVolcanoActivity",
+      "path": "/monitoring/volcanoes/live"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listMonitoringChanges",
+      "path": "/monitoring/changes"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listMonitoringLocations",
+      "path": "/monitoring/locations"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listPriorityWatchVolcanoes",
+      "path": "/monitoring/volcanoes/priority-watch"
+    },
+    {
+      "api": "onokoro",
+      "operationId": "listVolcanoes",
+      "path": "/monitoring/volcanoes"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getClimateForcing",
+      "path": "/milankovitch/climate-forcing"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getCurrentRotation",
+      "path": "/rotation/current"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getEarthSunDistance",
+      "path": "/orbital/earth-sun-distance"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getHistoricalRotation",
+      "path": "/rotation/historical"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getInsolation",
+      "path": "/milankovitch/insolation"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getIntegratedTimeline",
+      "path": "/timeline/integrated"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getKeplerianElements",
+      "path": "/orbital/keplerian"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getLengthOfDay",
+      "path": "/rotation/lod"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getMilankovitchCycles",
+      "path": "/milankovitch/cycles"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getMoonDistance",
+      "path": "/moon/distance"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getNutation",
+      "path": "/rotation/nutation"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getPerihelion",
+      "path": "/orbital/perihelion"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getPolarMotion",
+      "path": "/rotation/polar-motion"
+    },
+    {
+      "api": "orbitalio",
+      "operationId": "getTidalEvolution",
+      "path": "/moon/tidal-evolution"
+    },
+    {
+      "api": "perks",
+      "operationId": "getChain",
+      "path": "/v1/chains/{code}"
+    },
+    {
+      "api": "perks",
+      "operationId": "getCrawlStatus",
+      "path": "/v1/crawl/status"
+    },
+    {
+      "api": "perks",
+      "operationId": "getNearbyShops",
+      "path": "/v1/shops/nearby"
+    },
+    {
+      "api": "perks",
+      "operationId": "getShopStats",
+      "path": "/v1/shops/stats"
+    },
+    {
+      "api": "perks",
+      "operationId": "listChains",
+      "path": "/v1/chains"
+    },
+    {
+      "api": "perks",
+      "operationId": "listShops",
+      "path": "/v1/shops"
+    },
+    {
+      "api": "plantunify",
+      "operationId": "getCareV2",
+      "path": "/api/v2/care/{id}"
+    },
+    {
+      "api": "plantunify",
+      "operationId": "getPlantV2",
+      "path": "/api/v2/plants/{id}"
+    },
+    {
+      "api": "plantunify",
+      "operationId": "searchPlantsV2",
+      "path": "/api/v2/plants/search"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getAdminAiTraffic",
+      "path": "/admin/ai-traffic"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getAdminPath",
+      "path": "/admin/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getAuthSignin",
+      "path": "/auth/signin"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getCatalogHtml",
+      "path": "/catalog"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getCatalogJson",
+      "path": "/catalog.json"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getCelestoraPath",
+      "path": "/api/v1/celestora/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getConsole",
+      "path": "/console"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getEnrichPath",
+      "path": "/api/v1/enrich/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getHealth",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getLlmsFullTxt",
+      "path": "/llms-full.txt"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getOnokoroPath",
+      "path": "/api/v1/onokoro/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getPlantunifyPath",
+      "path": "/api/v1/plantunify/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getQuickstart",
+      "path": "/quickstart"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getUbusnaPath",
+      "path": "/api/v1/ubusna/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getUsage",
+      "path": "/api/v1/usage"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getWeathioPath",
+      "path": "/api/v1/weathio/{path}"
+    },
+    {
+      "api": "ppn-hub-workers",
+      "operationId": "getWellKnownOpenapi",
+      "path": "/.well-known/openapi.yaml"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getInfo",
+      "path": "/api/v1/info"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getProjectsList",
+      "path": "/api/v1/projects/list"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getProjectsProjectId",
+      "path": "/api/v1/projects/{projectId}"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getRoiCapacityFactor",
+      "path": "/api/v1/roi/capacity-factor"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getTemplatesList",
+      "path": "/api/v1/templates/list"
+    },
+    {
+      "api": "renewio",
+      "operationId": "getTemplatesTemplateId",
+      "path": "/api/v1/templates/{templateId}"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "getAddressByPostalCode",
+      "path": "/api/v1/address/postal/{postal_code}"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "getMunicipality",
+      "path": "/api/v1/municipalities/{code}"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "googleGeocode",
+      "path": "/api/v1/google-compat/geocode/json"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "googlePlaceDetails",
+      "path": "/api/v1/google-compat/details/json"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "googleReverseGeocode",
+      "path": "/api/v1/google-compat/reverseGeocode/json"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "listMunicipalities",
+      "path": "/api/v1/municipalities"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "listMunicipalitiesByPrefecture",
+      "path": "/api/v1/municipalities/prefecture/{prefecture}"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "listNormalizationFeedback",
+      "path": "/api/v1/normalization"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "listPrefectures",
+      "path": "/api/v1/municipalities/prefectures/list"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "reverseGeocode",
+      "path": "/api/v1/address/reverse"
+    },
+    {
+      "api": "sakurahub-address",
+      "operationId": "suggestAddress",
+      "path": "/suggest"
+    },
+    {
+      "api": "sakurahub-web",
+      "operationId": "getAuthCallback",
+      "path": "/auth/callback"
+    },
+    {
+      "api": "sakurahub-web",
+      "operationId": "getAuthLogin",
+      "path": "/auth/login"
+    },
+    {
+      "api": "sakurahub-web",
+      "operationId": "getAuthLogout",
+      "path": "/auth/logout"
+    },
+    {
+      "api": "sakurahub-web",
+      "operationId": "getStatus",
+      "path": "/api/status"
+    },
+    {
+      "api": "science-climate",
+      "operationId": "getAdaptation",
+      "path": "/api/v1/adaptation"
+    },
+    {
+      "api": "science-climate",
+      "operationId": "getEcosystemResponses",
+      "path": "/api/v1/ecosystem-responses"
+    },
+    {
+      "api": "science-climate",
+      "operationId": "getImpacts",
+      "path": "/api/v1/impacts"
+    },
+    {
+      "api": "science-climate",
+      "operationId": "getTrends",
+      "path": "/api/v1/trends"
+    },
+    {
+      "api": "science-climate",
+      "operationId": "getVulnerability",
+      "path": "/api/v1/vulnerability"
+    },
+    {
+      "api": "science-ecology",
+      "operationId": "getInteractions",
+      "path": "/api/v1/interactions"
+    },
+    {
+      "api": "science-ecology",
+      "operationId": "getInteractionStats",
+      "path": "/api/v1/interactions/stats"
+    },
+    {
+      "api": "site-matching",
+      "operationId": "getSiteMatchingApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "site-matching",
+      "operationId": "getSiteMatchingApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "sla-viewer-production",
+      "operationId": "getSlaData",
+      "path": "/api/v1/data"
+    },
+    {
+      "api": "storage-optimize",
+      "operationId": "getStorageOptimizeApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "storage-optimize",
+      "operationId": "getStorageOptimizeApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "tariff-optimize",
+      "operationId": "getTariffOptimizeApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "tariff-optimize",
+      "operationId": "getTariffOptimizeApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "terra",
+      "operationId": "checkVegetation",
+      "path": "/veg/check"
+    },
+    {
+      "api": "terra",
+      "operationId": "getBiomePoint",
+      "path": "/biome/point"
+    },
+    {
+      "api": "terra",
+      "operationId": "getGlacierTimeline",
+      "path": "/glacier/timeline"
+    },
+    {
+      "api": "terra",
+      "operationId": "getHistoricalVegetation",
+      "path": "/api/v1/vegetation/historical"
+    },
+    {
+      "api": "terra",
+      "operationId": "getLicenseUsage",
+      "path": "/api/v1/license/usage"
+    },
+    {
+      "api": "terra",
+      "operationId": "getSeasonalVegetation",
+      "path": "/api/v1/vegetation/seasonal"
+    },
+    {
+      "api": "terra",
+      "operationId": "getSolarImpact",
+      "path": "/api/v1/solar-impact/acorn-trees"
+    },
+    {
+      "api": "terra",
+      "operationId": "getTerrainVegetationDensity",
+      "path": "/api/v1/terrain/vegetation-density"
+    },
+    {
+      "api": "terra",
+      "operationId": "getVegetationTile",
+      "path": "/api/v1/tiles/{z}/{x}/{y}.json"
+    },
+    {
+      "api": "terra",
+      "operationId": "predictGlacier",
+      "path": "/glacier/predict"
+    },
+    {
+      "api": "terra",
+      "operationId": "vegCheckGeoJson",
+      "path": "/veg/check.geojson"
+    },
+    {
+      "api": "traffic",
+      "operationId": "getRoot",
+      "path": "/api/v1"
+    },
+    {
+      "api": "transmission-loss",
+      "operationId": "getTransmissionLossApiV1Health",
+      "path": "/api/v1/health"
+    },
+    {
+      "api": "transmission-loss",
+      "operationId": "getTransmissionLossApiV1Performance",
+      "path": "/api/v1/performance"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getAmedasHistorical",
+      "path": "/api/v1/amedas/historical/{station_id}"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getAmedasHistory",
+      "path": "/api/v1/amedas/history/{station_id}"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getBeerIndex",
+      "path": "/api/v1/indices/beer"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getCloudLayers",
+      "path": "/api/v1/weather/cloud-layers"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getDailyForecast",
+      "path": "/api/v1/weather/daily-forecast"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getEnum",
+      "path": "/v1/metadata/enums/{name}"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getFutonIndex",
+      "path": "/api/v1/indices/futon"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getHeatStrokeIndex",
+      "path": "/api/v1/indices/heat-stroke"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getHourlyForecast",
+      "path": "/api/v1/weather/hourly"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getIceCreamIndex",
+      "path": "/api/v1/indices/ice-cream"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getJoggingIndex",
+      "path": "/api/v1/indices/jogging"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getLatestAmedas",
+      "path": "/api/v1/amedas/latest"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getLaundryIndex",
+      "path": "/api/v1/indices/laundry"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getNabeIndex",
+      "path": "/api/v1/indices/nabe"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getNikumanIndex",
+      "path": "/api/v1/indices/nikuman"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getOdenIndex",
+      "path": "/api/v1/indices/oden"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getWeatherByRegion",
+      "path": "/api/v1/weather/region/{regionCode}"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getWeatherForecast",
+      "path": "/api/v1/weather/forecast"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getWeatherOverview",
+      "path": "/api/v1/weather/overview"
+    },
+    {
+      "api": "weathio",
+      "operationId": "getWeatherWarnings",
+      "path": "/api/v1/weather/warnings"
+    },
+    {
+      "api": "weathio",
+      "operationId": "listAmedasStations",
+      "path": "/api/v1/amedas/stations"
+    },
+    {
+      "api": "weathio",
+      "operationId": "listEnums",
+      "path": "/v1/metadata/enums"
+    },
+    {
+      "api": "weathio",
+      "operationId": "listIndices",
+      "path": "/api/v1/indices/"
+    }
+  ]
+}
