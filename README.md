@@ -1,5 +1,7 @@
 # PPN Hub Free MCP
 
+[![CI](https://github.com/dkurokawa/ppn-hub-free-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/dkurokawa/ppn-hub-free-mcp/actions/workflows/ci.yml)
+
 **Keyless, read-only MCP entry point for [PPN Hub](https://ppn-hub.com)** — try
 75 public APIs (weather, elevation, Japanese addresses, environment, science,
 civic data) from any MCP client with **zero signup**.
@@ -28,27 +30,35 @@ claude mcp add --transport http ppn-free https://mcp-free.ppn-hub.com/mcp
 
 ## Free tier limits
 
-| Limit                    | Value                                     |
-| ------------------------ | ----------------------------------------- |
-| Per IP, burst            | 10 requests / minute                      |
-| Per IP, daily            | 100 units / day (UTC)                     |
-| Shared global cap        | 5,000 units / day — last-resort abuse cap |
-| `environment_brief` cost | 10 units per call                         |
+| Limit                    | Value                                      | Accounting                       |
+| ------------------------ | ------------------------------------------- | --------------------------------- |
+| Per IP, burst            | 10 requests / minute                       | Cloudflare-native rate limiter    |
+| Per IP, daily            | 100 units / day (UTC)                      | **Approximate** — KV, best-effort |
+| Shared global cap        | 5,000 units / day — last-resort abuse cap  | **Exact** — Durable Object        |
+| `environment_brief` cost | 10 units per call                          | —                                  |
 
-Regular requests cost 1 unit (`initialize`/`tools/list` are free). When you hit
-a limit you get a `429` with a pointer to the quickstart. Abusive patterns
-(operation brute-forcing, endpoint enumeration sweeps) earn a temporary 24h
-block. Client IPs are stored only as salted SHA-256 hashes.
+Regular requests cost 1 unit (`initialize`/`ping`/`tools/list` are free). The
+per-IP counter lives in KV: reads and writes aren't atomic, so a racing
+client can squeeze a few extra units through (the per-minute limiter bounds
+how far). The **global cap is enforced exactly** by a single `GlobalBudget`
+Durable Object instance — Cloudflare serializes requests to one DO instance,
+so there's no equivalent race there, and it fails **closed** on exhaustion.
+When you hit a limit you get a `429` with a pointer to the quickstart.
+Abusive patterns (operation brute-forcing, endpoint enumeration sweeps) earn
+a temporary 24h block. Client IPs are stored only as salted SHA-256 hashes.
 
 ## How it works (architecture)
 
-This repo is a **thin proxy Worker** — Hono only, ~4 small source files, no
-access to any private code:
+This repo is a **thin proxy Worker** — Hono only, a handful of small source
+files, no access to any private code:
 
 ```
 MCP client ──POST /mcp──▶ ppn-hub-free-mcp (this repo)
-                            │  1. ban list / rate limits / daily budgets (KV)
-                            │  2. JSON-RPC inspection (batches included):
+                            │  1. ban list / per-minute limiter / daily
+                            │     budgets — per-IP (KV, approximate) +
+                            │     global (Durable Object, exact, fail-closed)
+                            │  2. JSON-RPC inspection: batches and
+                            │     off-allow-list methods rejected outright,
                             │     GET-only allowlist, deny-by-default
                             │  3. inject a dedicated free-tier backend key
                             ▼
@@ -56,33 +66,43 @@ MCP client ──POST /mcp──▶ ppn-hub-free-mcp (this repo)
 ```
 
 - `src/index.ts` — routing, limit enforcement, upstream forwarding
-- `src/rpc.ts` — JSON-RPC inspection + `tools/list` description rewriting
-- `src/guard.ts` — KV budgets, abuse detection, ban list
+- `src/rpc.ts` — JSON-RPC inspection (protocol-level rejection + per-tool
+  policy) + `tools/list` description rewriting
+- `src/guard.ts` — per-IP KV budget, global Durable Object budget client,
+  abuse detection, ban list
+- `src/global-budget.ts` — the `GlobalBudget` Durable Object itself (the
+  exact half of the daily budget accounting)
 - `src/allowlist.ts` + `allowlist.json` — the GET-only allowlist (deny-by-default)
 - `scripts/gen-allowlist.mjs` — regenerates `allowlist.json` from the LIVE
   public surface; endpoints whose backing code bills per call (AI providers)
-  are excluded there
+  are excluded there, and it refuses to write a possibly-truncated list
 
 The backend key held by this Worker is a normal free-tier consumer key — it is
-**not** a service/admin credential, and the upstream gateway enforces its own
-auth and quotas independently ([auth model](https://github.com/dkurokawa/ppn-mono/blob/main/docs/MCP-CLIENT-SETUP.md)).
+**not** a service/admin credential. It is only ever attached to allowlisted
+`execute_api` calls and `environment_brief`; every other method is forwarded
+anonymously or rejected before it reaches the upstream gateway, which
+enforces its own auth and quotas independently.
 
 ## Develop / deploy
 
 ```bash
 pnpm install
-pnpm test              # vitest: guards, allowlist, JSON-RPC inspection
+pnpm test               # vitest: guards, allowlist, JSON-RPC inspection, DO budget
+pnpm run coverage        # same, with a coverage report
 pnpm run typecheck
-pnpm run dev           # wrangler dev (guards fail open without KV/limiter)
+pnpm run lint
+pnpm run dev             # wrangler dev (guards fail open without KV/limiter/DO)
 ```
 
-Deploys are **manual** (this repo is not covered by the ppn-mono CI pipeline):
+CI (`.github/workflows/ci.yml`) runs install → typecheck → lint → test on
+Node 22.x and 24.x. Deploys are **manual**:
 
 ```bash
+export CLOUDFLARE_ACCOUNT_ID=...                 # wrangler reads this; no account_id in wrangler.toml
 pnpm exec wrangler kv namespace create FREE_KV   # once; paste the id into wrangler.toml
 pnpm exec wrangler secret put FREE_TIER_BACKEND_KEY --env production
 pnpm exec wrangler secret put IP_HASH_SALT --env production   # openssl rand -hex 32
-pnpm run deploy
+pnpm run deploy                                  # also applies the GlobalBudget DO migration
 ```
 
 ## License
