@@ -115,7 +115,7 @@ describe('POST /mcp — anonymous methods and key injection', () => {
   it('injects the backend key for an allowlisted execute_api call', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, result: {} }));
     const res = await postMcp(
-      makeEnv({ backendKey: 'ppn_live_abc123' }),
+      makeEnv({ backendKey: 'ppn_live_abc123' }), // gitleaks:allow — test dummy, not a real key
       toolCall('execute_api', { api: 'onokoro', operationId: 'getElevation' }),
     );
     expect(res.status).toBe(200);
