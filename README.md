@@ -91,8 +91,18 @@ pnpm test               # vitest: guards, allowlist, JSON-RPC inspection, DO bud
 pnpm run coverage        # same, with a coverage report
 pnpm run typecheck
 pnpm run lint
-pnpm run dev             # wrangler dev (guards fail open without KV/limiter/DO)
+cp .dev.vars.example .dev.vars   # once; wrangler.toml binds FREE_KV even locally
+pnpm run dev             # wrangler dev
 ```
+
+`wrangler.toml` binds `FREE_KV` at the top level too, so it's present even
+under `wrangler dev` — and this Worker fails closed (503
+`FREE_TIER_MISCONFIGURED`) whenever `FREE_KV` is bound but `IP_HASH_SALT`
+isn't set, rather than falling back to a fixed salt. `.dev.vars.example` has
+a dummy `IP_HASH_SALT` (any string works locally) and an empty
+`FREE_TIER_BACKEND_KEY` (`execute_api`/`environment_brief` calls return 503
+`FREE_TIER_UNAVAILABLE` until you set one; `search_apis`/`tools/list`/etc.
+work without it). Copy it to `.dev.vars` (gitignored) before running `dev`.
 
 CI (`.github/workflows/ci.yml`) runs install → typecheck → lint → test on
 Node 22.x and 24.x. Deploys are **manual**:

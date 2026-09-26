@@ -1,0 +1,7 @@
+# Copy this file to .dev.vars for `wrangler dev` (gitignored, never commit
+# real values). wrangler.toml binds FREE_KV even locally, and this Worker
+# fails closed with 503 FREE_TIER_MISCONFIGURED if FREE_KV is bound but
+# IP_HASH_SALT is missing — so a value here (any string, dev doesn't need a
+# real secret) is required just to get past that check.
+IP_HASH_SALT=local-dev-salt
+FREE_TIER_BACKEND_KEY=
