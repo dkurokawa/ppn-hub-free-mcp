@@ -3,33 +3,21 @@ import {
   hashIp,
   dayStamp,
   isBanned,
-  consumeBudget,
+  checkIpBudget,
+  chargeIpBudget,
+  refundIpBudget,
+  consumeGlobalBudget,
+  refundGlobalBudget,
   recordDenied,
   recordApiSpread,
   ERR_BAN_THRESHOLD,
   ENUM_BAN_THRESHOLD,
-  type KvLike,
 } from '../src/guard.js';
-
-/** In-memory KV double (TTLs recorded but not enforced). */
-class FakeKv implements KvLike {
-  store = new Map<string, string>();
-  ttls = new Map<string, number | undefined>();
-  failing = false;
-
-  async get(key: string): Promise<string | null> {
-    if (this.failing) throw new Error('kv down');
-    return this.store.get(key) ?? null;
-  }
-  async put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void> {
-    if (this.failing) throw new Error('kv down');
-    this.store.set(key, value);
-    this.ttls.set(key, options?.expirationTtl);
-  }
-}
+import { FakeKv, makeFakeGlobalBudgetNamespace } from './fakes.js';
 
 const NOW = new Date('2026-07-20T12:00:00Z');
-const LIMITS = { ipDay: 100, globalDay: 5000 };
+const IP_DAY_LIMIT = 100;
+const GLOBAL_DAY_LIMIT = 5000;
 
 describe('hashIp', () => {
   it('returns a stable 16-char hex hash', async () => {
@@ -51,68 +39,143 @@ describe('dayStamp', () => {
   });
 });
 
-describe('consumeBudget — per-IP daily cap', () => {
-  it('allows and accumulates under the cap', async () => {
+describe('checkIpBudget / chargeIpBudget — per-IP daily cap (KV, approximate)', () => {
+  it('allows and, once charged, accumulates under the cap', async () => {
     const kv = new FakeKv();
     for (let i = 0; i < 5; i++) {
-      expect((await consumeBudget(kv, 'aaaa', 1, NOW, LIMITS)).allowed).toBe(true);
+      expect((await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT)).allowed).toBe(true);
+      await chargeIpBudget(kv, 'aaaa', 1, NOW);
     }
     expect(kv.store.get('free-day:aaaa:20260720')).toBe('5');
-    expect(kv.store.get('free-global:20260720')).toBe('5');
   });
 
-  it('allows exactly up to the cap, then rejects with scope=ip', async () => {
+  it('allows exactly up to the cap, then rejects without charging further', async () => {
     const kv = new FakeKv();
     kv.store.set('free-day:aaaa:20260720', '99');
-    expect((await consumeBudget(kv, 'aaaa', 1, NOW, LIMITS)).allowed).toBe(true); // 100th unit
-    const denied = await consumeBudget(kv, 'aaaa', 1, NOW, LIMITS);
-    expect(denied).toEqual({ allowed: false, scope: 'ip' });
-    // A rejected request must not consume budget.
+    expect((await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT)).allowed).toBe(true); // 100th unit
+    await chargeIpBudget(kv, 'aaaa', 1, NOW);
+    expect(kv.store.get('free-day:aaaa:20260720')).toBe('100');
+
+    expect((await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT)).allowed).toBe(false);
+    // A rejected check must not have charged anything.
     expect(kv.store.get('free-day:aaaa:20260720')).toBe('100');
   });
 
-  it('charges environment_brief-sized units in one step', async () => {
+  it('checkIpBudget does not write — repeated checks without a charge never accumulate', async () => {
+    const kv = new FakeKv();
+    await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT);
+    await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT);
+    expect(kv.store.has('free-day:aaaa:20260720')).toBe(false);
+  });
+
+  it('rejects environment_brief-sized (10-unit) charges that would cross the cap', async () => {
     const kv = new FakeKv();
     kv.store.set('free-day:aaaa:20260720', '95');
-    const denied = await consumeBudget(kv, 'aaaa', 10, NOW, LIMITS);
-    expect(denied).toEqual({ allowed: false, scope: 'ip' }); // 95 + 10 > 100
-    expect((await consumeBudget(kv, 'aaaa', 5, NOW, LIMITS)).allowed).toBe(true);
+    expect((await checkIpBudget(kv, 'aaaa', 10, NOW, IP_DAY_LIMIT)).allowed).toBe(false); // 95 + 10 > 100
+    expect((await checkIpBudget(kv, 'aaaa', 5, NOW, IP_DAY_LIMIT)).allowed).toBe(true);
   });
 
   it('resets on UTC day rollover', async () => {
     const kv = new FakeKv();
     kv.store.set('free-day:aaaa:20260720', '100');
     const nextDay = new Date('2026-07-21T00:00:01Z');
-    expect((await consumeBudget(kv, 'aaaa', 1, nextDay, LIMITS)).allowed).toBe(true);
+    expect((await checkIpBudget(kv, 'aaaa', 1, nextDay, IP_DAY_LIMIT)).allowed).toBe(true);
+    await chargeIpBudget(kv, 'aaaa', 1, nextDay);
     expect(kv.store.get('free-day:aaaa:20260721')).toBe('1');
-  });
-});
-
-describe('consumeBudget — global daily cap (fail-closed)', () => {
-  it('rejects with scope=global when the shared budget is exhausted, even for a fresh IP', async () => {
-    const kv = new FakeKv();
-    kv.store.set('free-global:20260720', '5000');
-    const denied = await consumeBudget(kv, 'fresh-ip-hash', 1, NOW, LIMITS);
-    expect(denied).toEqual({ allowed: false, scope: 'global' });
-  });
-
-  it('allows exactly up to the global cap', async () => {
-    const kv = new FakeKv();
-    kv.store.set('free-global:20260720', '4999');
-    expect((await consumeBudget(kv, 'aaaa', 1, NOW, LIMITS)).allowed).toBe(true);
-    expect(kv.store.get('free-global:20260720')).toBe('5000');
   });
 
   it('fails open when KV is unavailable (minute limiter still bounds abuse)', async () => {
     const kv = new FakeKv();
     kv.failing = true;
-    expect((await consumeBudget(kv, 'aaaa', 1, NOW, LIMITS)).allowed).toBe(true);
+    expect((await checkIpBudget(kv, 'aaaa', 1, NOW, IP_DAY_LIMIT)).allowed).toBe(true);
   });
 
   it('charges nothing for zero-unit requests', async () => {
     const kv = new FakeKv();
-    expect((await consumeBudget(kv, 'aaaa', 0, NOW, LIMITS)).allowed).toBe(true);
+    expect((await checkIpBudget(kv, 'aaaa', 0, NOW, IP_DAY_LIMIT)).allowed).toBe(true);
+    await chargeIpBudget(kv, 'aaaa', 0, NOW);
     expect(kv.store.has('free-day:aaaa:20260720')).toBe(false);
+  });
+});
+
+describe('refundIpBudget', () => {
+  it('gives back units to the per-IP counter', async () => {
+    const kv = new FakeKv();
+    kv.store.set('free-day:aaaa:20260720', '10');
+    await refundIpBudget(kv, 'aaaa', 4, NOW);
+    expect(kv.store.get('free-day:aaaa:20260720')).toBe('6');
+  });
+
+  it('never goes below zero', async () => {
+    const kv = new FakeKv();
+    kv.store.set('free-day:aaaa:20260720', '2');
+    await refundIpBudget(kv, 'aaaa', 10, NOW);
+    expect(kv.store.get('free-day:aaaa:20260720')).toBe('0');
+  });
+
+  it('does nothing for zero-unit refunds', async () => {
+    const kv = new FakeKv();
+    await refundIpBudget(kv, 'aaaa', 0, NOW);
+    expect(kv.store.has('free-day:aaaa:20260720')).toBe(false);
+  });
+});
+
+describe('consumeGlobalBudget / refundGlobalBudget — global daily cap (Durable Object, exact, fail-closed)', () => {
+  it('allows and accumulates under the cap', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    for (let i = 0; i < 5; i++) {
+      expect((await consumeGlobalBudget(ns, NOW, 1, GLOBAL_DAY_LIMIT)).allowed).toBe(true);
+    }
+    expect(await ns.storage.get<number>('used:20260720')).toBe(5);
+  });
+
+  it('rejects with scope=global when the shared budget is exhausted, even for a fresh IP', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await ns.storage.put('used:20260720', GLOBAL_DAY_LIMIT);
+    expect((await consumeGlobalBudget(ns, NOW, 1, GLOBAL_DAY_LIMIT)).allowed).toBe(false);
+  });
+
+  it('allows exactly up to the global cap', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await ns.storage.put('used:20260720', GLOBAL_DAY_LIMIT - 1);
+    expect((await consumeGlobalBudget(ns, NOW, 1, GLOBAL_DAY_LIMIT)).allowed).toBe(true);
+    expect(await ns.storage.get<number>('used:20260720')).toBe(GLOBAL_DAY_LIMIT);
+  });
+
+  it('does not charge a rejected request', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await ns.storage.put('used:20260720', GLOBAL_DAY_LIMIT);
+    await consumeGlobalBudget(ns, NOW, 1, GLOBAL_DAY_LIMIT);
+    expect(await ns.storage.get<number>('used:20260720')).toBe(GLOBAL_DAY_LIMIT);
+  });
+
+  it('refunds previously charged units', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await consumeGlobalBudget(ns, NOW, 10, GLOBAL_DAY_LIMIT);
+    await refundGlobalBudget(ns, NOW, 4);
+    expect(await ns.storage.get<number>('used:20260720')).toBe(6);
+  });
+
+  it('refund never goes below zero', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await consumeGlobalBudget(ns, NOW, 2, GLOBAL_DAY_LIMIT);
+    await refundGlobalBudget(ns, NOW, 10);
+    expect(await ns.storage.get<number>('used:20260720')).toBe(0);
+  });
+
+  it('resets on UTC day rollover (separate storage keys per day)', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    await ns.storage.put('used:20260720', GLOBAL_DAY_LIMIT);
+    const nextDay = new Date('2026-07-21T00:00:01Z');
+    expect((await consumeGlobalBudget(ns, nextDay, 1, GLOBAL_DAY_LIMIT)).allowed).toBe(true);
+    expect(await ns.storage.get<number>('used:20260721')).toBe(1);
+  });
+
+  it('charges/refunds nothing for zero units', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    expect((await consumeGlobalBudget(ns, NOW, 0, GLOBAL_DAY_LIMIT)).allowed).toBe(true);
+    await refundGlobalBudget(ns, NOW, 0);
+    expect(await ns.storage.get<number>('used:20260720')).toBeUndefined();
   });
 });
 
@@ -149,13 +212,13 @@ describe('ban list', () => {
       await recordApiSpread(kv, 'aaaa', ['same-api']);
     }
     expect(kv.store.has('free-ban:aaaa')).toBe(false);
-    expect(JSON.parse(kv.store.get('free-enum:aaaa')!)).toEqual(['same-api']);
+    expect(JSON.parse(kv.store.get('free-enum:aaaa')!) as string[]).toEqual(['same-api']);
   });
 
   it('recordApiSpread survives a corrupted counter', async () => {
     const kv = new FakeKv();
     kv.store.set('free-enum:aaaa', 'not-json');
     await recordApiSpread(kv, 'aaaa', ['api-x']);
-    expect(JSON.parse(kv.store.get('free-enum:aaaa')!)).toEqual(['api-x']);
+    expect(JSON.parse(kv.store.get('free-enum:aaaa')!) as string[]).toEqual(['api-x']);
   });
 });

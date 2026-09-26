@@ -6,8 +6,20 @@
  *
  *   1. temp ban list            KV `free-ban:<ipHash>` (TTL 24h)
  *   2. per-IP daily unit budget KV `free-day:<ipHash>:<day>` (default 100/day)
- *   3. global daily unit budget KV `free-global:<day>` (default 5000/day) —
- *      the last-resort cap against IP-rotation abuse. Exhaustion fails CLOSED.
+ *      — best-effort: KV read-modify-write is not atomic, so concurrent
+ *      requests can under-count (see below).
+ *   3. global daily unit budget the `GlobalBudget` Durable Object
+ *      (src/global-budget.ts), single instance named "global" — the
+ *      last-resort cap against IP-rotation abuse. DO fetch()s to one
+ *      instance are serialized by Cloudflare, so this cap is EXACT, not an
+ *      approximation. Exhaustion fails CLOSED.
+ *
+ * index.ts calls these in order: checkIpBudget() (read-only) → if that
+ * passes, consumeGlobalBudget() (charges the DO) → if that also allows,
+ * chargeIpBudget() (writes the KV counter). A request whose global charge is
+ * rejected never touches the per-IP counter, so the two never drift out of
+ * sync from a rejected call. On a failed upstream call, index.ts refunds
+ * both sides via refundIpBudget() / refundGlobalBudget().
  *
  * Abuse signals feeding the ban list:
  *   - denied / unknown operations: KV `free-err:<ipHash>` (TTL 1h, ban at >= 20)
@@ -31,6 +43,12 @@ export interface KvLike {
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }
 
+/** Minimal Durable Object namespace surface used to reach GlobalBudget (subset of DurableObjectNamespace). */
+export interface GlobalBudgetNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): { fetch(url: string, init: RequestInit): Promise<Response> };
+}
+
 export const DEFAULT_IP_DAY_LIMIT = 100;
 export const DEFAULT_GLOBAL_DAY_LIMIT = 5000;
 export const ERR_BAN_THRESHOLD = 20;
@@ -40,6 +58,9 @@ const DAY_COUNTER_TTL = 2 * 24 * 60 * 60; // outlives its UTC day, then expires
 const ERR_TTL = 60 * 60;
 const ENUM_TTL = 10 * 60;
 const BAN_TTL = 24 * 60 * 60;
+
+/** Name of the single GlobalBudget Durable Object instance backing the whole Worker. */
+const GLOBAL_BUDGET_INSTANCE_NAME = 'global';
 
 /** sha256(ip + salt), truncated to 16 hex chars — the only IP form stored. */
 export async function hashIp(ip: string, salt: string): Promise<string> {
@@ -60,6 +81,10 @@ function parseCount(raw: string | null): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function ipDayKey(ipHash: string, day: string): string {
+  return `free-day:${ipHash}:${day}`;
+}
+
 export async function isBanned(kv: KvLike, ipHash: string): Promise<boolean> {
   try {
     return (await kv.get(`free-ban:${ipHash}`)) !== null;
@@ -68,53 +93,92 @@ export async function isBanned(kv: KvLike, ipHash: string): Promise<boolean> {
   }
 }
 
-export interface BudgetLimits {
-  ipDay: number;
-  globalDay: number;
-}
-
-export interface BudgetResult {
+export interface IpBudgetCheck {
   allowed: boolean;
-  /** Which cap rejected the request (only set when allowed === false). */
-  scope?: 'ip' | 'global';
 }
 
 /**
- * Charge `units` against the per-IP and global daily budgets.
- * Rejects (without charging) when either cap would be exceeded.
+ * Read-only check: would charging `units` push the per-IP daily counter over
+ * `ipDayLimit`? Does not write — call chargeIpBudget() only after the global
+ * Durable Object has also allowed the request, so a global rejection never
+ * leaves the per-IP counter charged for nothing.
  */
-export async function consumeBudget(
+export async function checkIpBudget(
   kv: KvLike,
   ipHash: string,
   units: number,
   now: Date,
-  limits: BudgetLimits = { ipDay: DEFAULT_IP_DAY_LIMIT, globalDay: DEFAULT_GLOBAL_DAY_LIMIT },
-): Promise<BudgetResult> {
+  ipDayLimit: number = DEFAULT_IP_DAY_LIMIT,
+): Promise<IpBudgetCheck> {
   if (units <= 0) return { allowed: true };
-  const day = dayStamp(now);
-  const ipKey = `free-day:${ipHash}:${day}`;
-  const globalKey = `free-global:${day}`;
-  let ipUsed: number;
-  let globalUsed: number;
   try {
-    [ipUsed, globalUsed] = (await Promise.all([kv.get(ipKey), kv.get(globalKey)])).map(parseCount) as [
-      number,
-      number,
-    ];
+    const used = parseCount(await kv.get(ipDayKey(ipHash, dayStamp(now))));
+    return { allowed: used + units <= ipDayLimit };
   } catch {
     return { allowed: true }; // KV outage: fail open
   }
-  if (ipUsed + units > limits.ipDay) return { allowed: false, scope: 'ip' };
-  if (globalUsed + units > limits.globalDay) return { allowed: false, scope: 'global' };
+}
+
+/** Charge `units` against the per-IP daily counter. Best effort (see module doc). */
+export async function chargeIpBudget(kv: KvLike, ipHash: string, units: number, now: Date): Promise<void> {
+  if (units <= 0) return;
   try {
-    await Promise.all([
-      kv.put(ipKey, String(ipUsed + units), { expirationTtl: DAY_COUNTER_TTL }),
-      kv.put(globalKey, String(globalUsed + units), { expirationTtl: DAY_COUNTER_TTL }),
-    ]);
+    const key = ipDayKey(ipHash, dayStamp(now));
+    const used = parseCount(await kv.get(key));
+    await kv.put(key, String(used + units), { expirationTtl: DAY_COUNTER_TTL });
   } catch {
-    // Charge failed — still allow; the request was within budget.
+    // best effort
   }
-  return { allowed: true };
+}
+
+/** Give back `units` previously charged to the per-IP daily counter (upstream failure). */
+export async function refundIpBudget(kv: KvLike, ipHash: string, units: number, now: Date): Promise<void> {
+  if (units <= 0) return;
+  try {
+    const key = ipDayKey(ipHash, dayStamp(now));
+    const used = parseCount(await kv.get(key));
+    await kv.put(key, String(Math.max(0, used - units)), { expirationTtl: DAY_COUNTER_TTL });
+  } catch {
+    // best effort
+  }
+}
+
+export interface GlobalBudgetResult {
+  allowed: boolean;
+}
+
+/**
+ * Charge `units` against the shared global daily budget via the GlobalBudget
+ * Durable Object. The DO serializes this check-then-write, so — unlike the
+ * per-IP KV counters — this is exact: no two concurrent calls can both
+ * squeeze through past `globalDayLimit`.
+ */
+export async function consumeGlobalBudget(
+  ns: GlobalBudgetNamespaceLike,
+  now: Date,
+  units: number,
+  globalDayLimit: number = DEFAULT_GLOBAL_DAY_LIMIT,
+): Promise<GlobalBudgetResult> {
+  if (units <= 0) return { allowed: true };
+  const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
+  const res = await stub.fetch('https://global-budget.internal/consume', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ day: dayStamp(now), units, limit: globalDayLimit }),
+  });
+  const body = await res.json<{ allowed: boolean }>();
+  return { allowed: body.allowed };
+}
+
+/** Give back `units` previously charged to the global daily budget (upstream failure). */
+export async function refundGlobalBudget(ns: GlobalBudgetNamespaceLike, now: Date, units: number): Promise<void> {
+  if (units <= 0) return;
+  const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
+  await stub.fetch('https://global-budget.internal/refund', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ day: dayStamp(now), units }),
+  });
 }
 
 /**
