@@ -1,15 +1,16 @@
 # ppn-hub-free-mcp — keyless read-only MCP proxy for mcp.ppn-hub.com.
 #
-# Deploys are MANUAL (`pnpm run deploy`) — this repo is not covered by the
-# ppn-mono CI pipeline. See README.md for the full deploy checklist
-# (KV namespace, secrets, DNS).
+# Deploys are MANUAL (`pnpm run deploy`) — CI only runs install/typecheck/
+# lint/test. See README.md for the full deploy checklist (KV namespace,
+# Durable Object migration, secrets, DNS).
 
 name = "ppn-hub-free-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 workers_dev = false
 
-account_id = "fdf6dd4d81864fb35f6fd179fdeadc86"
+# No account_id here — pass it via the CLOUDFLARE_ACCOUNT_ID env var instead
+# (wrangler reads it automatically). See README.md for the deploy checklist.
 
 [vars]
 UPSTREAM_MCP_URL = "https://mcp.ppn-hub.com/mcp"
@@ -24,19 +25,29 @@ name = "IP_RATE_LIMITER"
 namespace_id = "4052"
 simple = { limit = 10, period = 60 }
 
-# KV: daily budgets, abuse counters, temp ban list.
+# KV: daily budgets (per-IP, approximate), abuse counters, temp ban list.
 # Create the namespace before the first deploy and paste the id here:
 #   pnpm exec wrangler kv namespace create FREE_KV
 [[kv_namespaces]]
 binding = "FREE_KV"
 id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
 
+# Durable Object: the shared global daily budget, enforced exactly (see
+# src/global-budget.ts). A single instance backs the whole Worker.
+[[durable_objects.bindings]]
+name = "GLOBAL_BUDGET"
+class_name = "GlobalBudget"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GlobalBudget"]
+
 # ── Production ──
 [env.production]
 name = "ppn-hub-free-mcp"
 workers_dev = true
 routes = [
-  { pattern = "mcp-free.ppn-hub.com/*", zone_id = "046d146fe66bb5a2f61ed6e938c8db6c" }
+  { pattern = "mcp-free.ppn-hub.com", custom_domain = true }
 ]
 
 # Per-env tables do not inherit from top-level; mirror everything.
@@ -53,6 +64,14 @@ simple = { limit = 10, period = 60 }
 [[env.production.kv_namespaces]]
 binding = "FREE_KV"
 id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
+
+[[env.production.durable_objects.bindings]]
+name = "GLOBAL_BUDGET"
+class_name = "GlobalBudget"
+
+[[env.production.migrations]]
+tag = "v1"
+new_sqlite_classes = ["GlobalBudget"]
 
 # Secrets (set via `wrangler secret put`, never committed):
 #   FREE_TIER_BACKEND_KEY — dedicated ppn_live_* key the proxy injects for
