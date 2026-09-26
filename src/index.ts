@@ -197,20 +197,41 @@ app.post('/mcp', async (c) => {
     return c.json(denyBody(decision.id, decision.message));
   }
 
-  // ── Layer 2+3: daily budgets — per-IP (KV, approximate) checked first, then
-  //    the global cap (Durable Object, exact, fail-closed). Only once both
-  //    agree is the per-IP counter actually charged (see guard.ts). ──
+  // ── Fail fast if this call needs the backend key but none is configured —
+  //    BEFORE any budget is spent, so a misconfigured deploy doesn't charge
+  //    units for calls it can never forward. ──
+  if (decision.needsKey && !env.FREE_TIER_BACKEND_KEY) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FREE_TIER_UNAVAILABLE',
+          message: `The free execution tier is temporarily unavailable. Use a free ppn_live_* key against ${UPSTREAM_HINT}: ${QUICKSTART_URL}`,
+          status: 503,
+        },
+      },
+      503,
+    );
+  }
+
+  // ── Layer 2+3: daily budgets — per-IP (KV, approximate) and the global cap
+  //    (Durable Object, exact, fail-closed) are judged independently: each
+  //    only runs if its own binding is present. The per-IP counter is only
+  //    actually charged once the global check (if any) has also passed (see
+  //    guard.ts) — a global rejection never leaves per-IP charged for it. ──
   const now = new Date();
   let chargedUnits = 0;
-  if (kv && decision.units > 0) {
-    const ipDayLimit = intVar(env.FREE_IP_DAY_LIMIT, DEFAULT_IP_DAY_LIMIT);
-    const ipCheck = await checkIpBudget(kv, ipHash, decision.units, now, ipDayLimit);
-    if (!ipCheck.allowed) {
-      return tooMany(
-        c,
-        `Free tier daily budget exhausted for this IP (resets at 00:00 UTC). Get a free ` +
-          `ppn_live_* key for higher limits: ${QUICKSTART_URL}`,
-      );
+  if (decision.units > 0) {
+    if (kv) {
+      const ipDayLimit = intVar(env.FREE_IP_DAY_LIMIT, DEFAULT_IP_DAY_LIMIT);
+      const ipCheck = await checkIpBudget(kv, ipHash, decision.units, now, ipDayLimit);
+      if (!ipCheck.allowed) {
+        return tooMany(
+          c,
+          `Free tier daily budget exhausted for this IP (resets at 00:00 UTC). Get a free ` +
+            `ppn_live_* key for higher limits: ${QUICKSTART_URL}`,
+        );
+      }
     }
 
     if (globalBudget) {
@@ -225,7 +246,9 @@ app.post('/mcp', async (c) => {
       }
     }
 
-    await chargeIpBudget(kv, ipHash, decision.units, now);
+    if (kv) {
+      await chargeIpBudget(kv, ipHash, decision.units, now);
+    }
     chargedUnits = decision.units;
   }
   if (kv && decision.apisTouched.length > 0) {
@@ -239,20 +262,7 @@ app.post('/mcp', async (c) => {
   };
   const protocolVersion = c.req.header('MCP-Protocol-Version');
   if (protocolVersion) headers['mcp-protocol-version'] = protocolVersion;
-  if (decision.needsKey) {
-    if (!env.FREE_TIER_BACKEND_KEY) {
-      return c.json(
-        {
-          success: false,
-          error: {
-            code: 'FREE_TIER_UNAVAILABLE',
-            message: `The free execution tier is temporarily unavailable. Use a free ppn_live_* key against ${UPSTREAM_HINT}: ${QUICKSTART_URL}`,
-            status: 503,
-          },
-        },
-        503,
-      );
-    }
+  if (decision.needsKey && env.FREE_TIER_BACKEND_KEY) {
     headers.authorization = `Bearer ${env.FREE_TIER_BACKEND_KEY}`;
   }
 

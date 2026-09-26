@@ -132,13 +132,29 @@ describe('POST /mcp — anonymous methods and key injection', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('returns 503 FREE_TIER_UNAVAILABLE when needsKey but no backend key is configured', async () => {
-    const env = makeEnv();
+  it('returns 503 FREE_TIER_UNAVAILABLE when needsKey but no backend key is configured, without spending any budget', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const kv = new FakeKv();
+    const ns = makeFakeGlobalBudgetNamespace();
+    const ip = '203.0.113.40';
+    const salt = 'test-salt';
+    const ipHash = await hashIp(ip, salt);
+    const day = dayStamp(new Date());
+
+    const env = makeEnv({ kv, ipHashSalt: salt, globalBudget: ns });
     env.FREE_TIER_BACKEND_KEY = undefined;
-    const res = await postMcp(env, toolCall('execute_api', { api: 'onokoro', operationId: 'getElevation' }));
+    const res = await postMcp(env, toolCall('execute_api', { api: 'onokoro', operationId: 'getElevation' }), {
+      'cf-connecting-ip': ip,
+    });
+
     expect(res.status).toBe(503);
     const body = await res.json<{ error: { code: string } }>();
     expect(body.error.code).toBe('FREE_TIER_UNAVAILABLE');
+    // The 503 fires before any budget is touched — this must not have called
+    // upstream or charged either the per-IP (KV) or global (DO) counter.
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(kv.store.has(`free-day:${ipHash}:${day}`)).toBe(false);
+    expect(await ns.storage.get<number>(`used:${day}`)).toBeUndefined();
   });
 
   it('patches tools/list descriptions (plain JSON)', async () => {
@@ -272,6 +288,49 @@ describe('POST /mcp — daily budgets', () => {
 
     expect(res.status).toBe(429);
     expect(kv.store.has(`free-day:${ipHash}:${day}`)).toBe(false);
+  });
+
+  it('enforces the per-IP budget when only KV is bound (no GLOBAL_BUDGET)', async () => {
+    const kv = new FakeKv();
+    const ip = '203.0.113.12';
+    const salt = 'test-salt';
+    const ipHash = await hashIp(ip, salt);
+    const day = dayStamp(new Date());
+    kv.store.set(`free-day:${ipHash}:${day}`, '1');
+
+    const res = await postMcp(
+      makeEnv({ kv, ipHashSalt: salt, ipDayLimit: '1' }), // no globalBudget
+      toolCall('search_apis', { query: 'x' }),
+      { 'cf-connecting-ip': ip },
+    );
+
+    expect(res.status).toBe(429);
+  });
+
+  it('enforces the global budget when only GLOBAL_BUDGET is bound (no FREE_KV) — regression for the KV-gated bug', async () => {
+    const ns = makeFakeGlobalBudgetNamespace();
+    const day = dayStamp(new Date());
+    await ns.storage.put(`used:${day}`, 2);
+
+    const res = await postMcp(
+      makeEnv({ globalBudget: ns, globalDayLimit: '2' }), // no kv at all
+      toolCall('search_apis', { query: 'x' }),
+    );
+
+    expect(res.status).toBe(429);
+    // The global counter must not have been charged past the limit either.
+    expect(await ns.storage.get<number>(`used:${day}`)).toBe(2);
+  });
+
+  it('charges the global budget on a normal call when only GLOBAL_BUDGET is bound (no FREE_KV)', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, result: {} }));
+    const ns = makeFakeGlobalBudgetNamespace();
+    const day = dayStamp(new Date());
+
+    const res = await postMcp(makeEnv({ globalBudget: ns }), toolCall('search_apis', { query: 'x' })); // no kv
+
+    expect(res.status).toBe(200);
+    expect(await ns.storage.get<number>(`used:${day}`)).toBe(1);
   });
 });
 
