@@ -5,11 +5,72 @@ import { inspectRpc, denyBody, patchToolsListText, QUICKSTART_URL, UNIT_COST } f
 const isAllowed = (api: string, operationId: string) =>
   api === 'onokoro' && operationId === 'getElevation';
 
-const call = (name: string, args: Record<string, unknown> = {}, id: number = 1) => ({
+const call = (name: string, args: Record<string, unknown> = {}, id = 1) => ({
   jsonrpc: '2.0',
   id,
   method: 'tools/call',
   params: { name, arguments: args },
+});
+
+describe('inspectRpc — protocol-level rejection', () => {
+  it('rejects a batch (array payload) outright, regardless of contents', () => {
+    const d = inspectRpc(
+      [
+        call('search_apis', { query: 'weather' }, 1),
+        call('execute_api', { api: 'onokoro', operationId: 'getElevation' }, 2),
+      ],
+      isAllowed,
+    );
+    expect(d.kind).toBe('protocol-error');
+    if (d.kind !== 'protocol-error') return;
+    expect(d.status).toBe(400);
+    expect(d.body.error.code).toBe(-32600);
+    expect(d.body.error.message).toContain('Batch requests are not supported');
+  });
+
+  it('rejects an empty array as a batch too', () => {
+    const d = inspectRpc([], isAllowed);
+    expect(d.kind).toBe('protocol-error');
+    if (d.kind !== 'protocol-error') return;
+    expect(d.status).toBe(400);
+    expect(d.body.error.code).toBe(-32600);
+  });
+
+  it('rejects jsonrpc !== "2.0" as Invalid Request (400)', () => {
+    const d = inspectRpc({ jsonrpc: '1.0', id: 5, method: 'initialize' }, isAllowed);
+    expect(d.kind).toBe('protocol-error');
+    if (d.kind !== 'protocol-error') return;
+    expect(d.status).toBe(400);
+    expect(d.body.id).toBe(5);
+    expect(d.body.error).toEqual({ code: -32600, message: 'Invalid Request' });
+  });
+
+  it('rejects a non-string method as Invalid Request (400)', () => {
+    const d = inspectRpc({ jsonrpc: '2.0', id: 3 }, isAllowed);
+    expect(d.kind).toBe('protocol-error');
+    if (d.kind !== 'protocol-error') return;
+    expect(d.status).toBe(400);
+    expect(d.body.error.code).toBe(-32600);
+  });
+
+  it('rejects an unknown method as Method not found (200)', () => {
+    const d = inspectRpc({ jsonrpc: '2.0', id: 9, method: 'shutdown' }, isAllowed);
+    expect(d.kind).toBe('protocol-error');
+    if (d.kind !== 'protocol-error') return;
+    expect(d.status).toBe(200);
+    expect(d.body.id).toBe(9);
+    expect(d.body.error).toEqual({ code: -32601, message: 'Method not found' });
+  });
+
+  it('allows any notifications/* method through', () => {
+    const d = inspectRpc({ jsonrpc: '2.0', id: null, method: 'notifications/initialized' }, isAllowed);
+    expect(d).toEqual({ kind: 'forward', needsKey: false, units: 0, patchToolsList: false, apisTouched: [] });
+  });
+
+  it('allows ping through', () => {
+    const d = inspectRpc({ jsonrpc: '2.0', id: 1, method: 'ping' }, isAllowed);
+    expect(d).toMatchObject({ kind: 'forward', needsKey: false, units: 0 });
+  });
 });
 
 describe('inspectRpc — single messages', () => {
@@ -68,41 +129,6 @@ describe('inspectRpc — single messages', () => {
     const d = inspectRpc(call('drop_tables'), isAllowed);
     expect(d.kind).toBe('deny');
   });
-
-  it('denies a message with no method', () => {
-    const d = inspectRpc({ jsonrpc: '2.0', id: 3 }, isAllowed);
-    expect(d.kind).toBe('deny');
-  });
-});
-
-describe('inspectRpc — batches', () => {
-  it('sums units and ORs key injection across a clean batch', () => {
-    const d = inspectRpc(
-      [
-        call('search_apis', { query: 'weather' }, 1),
-        call('execute_api', { api: 'onokoro', operationId: 'getElevation' }, 2),
-      ],
-      isAllowed,
-    );
-    expect(d).toMatchObject({ kind: 'forward', needsKey: true, units: 2, apisTouched: ['onokoro'] });
-  });
-
-  it('rejects the whole batch when one element is denied (header-level key injection)', () => {
-    const d = inspectRpc(
-      [
-        call('execute_api', { api: 'onokoro', operationId: 'getElevation' }, 1),
-        call('execute_api', { api: 'onokoro', operationId: 'postFeedback' }, 2),
-      ],
-      isAllowed,
-    );
-    expect(d.kind).toBe('deny');
-    if (d.kind !== 'deny') return;
-    expect(d.id).toBe(2); // the offending element's id
-  });
-
-  it('rejects an empty batch', () => {
-    expect(inspectRpc([], isAllowed).kind).toBe('deny');
-  });
 });
 
 describe('denyBody', () => {
@@ -115,7 +141,7 @@ describe('denyBody', () => {
     expect(body.id).toBe(9);
     expect(body.error).toBeUndefined();
     expect(body.result.isError).toBe(true);
-    const inner = JSON.parse(body.result.content[0].text);
+    const inner = JSON.parse(body.result.content[0]!.text) as { error: { code: string } };
     expect(inner.error.code).toBe('FREE_TIER_RESTRICTED');
   });
 });
@@ -137,15 +163,16 @@ describe('patchToolsListText', () => {
     const sse = `event: message\ndata: ${JSON.stringify(toolsPayload)}\n\n`;
     const patched = patchToolsListText(sse, 'text/event-stream');
     expect(patched).toContain('event: message');
-    const data = JSON.parse(patched.split('\n')[1].slice(6));
-    expect(data.result.tools[1].description).toContain(QUICKSTART_URL);
-    expect(data.result.tools[2].description).toContain('Free tier');
-    expect(data.result.tools[0].description).toBe('Search across endpoints.');
+    const dataLine = patched.split('\n')[1]!;
+    const data = JSON.parse(dataLine.slice(6)) as typeof toolsPayload;
+    expect(data.result.tools[1]!.description).toContain(QUICKSTART_URL);
+    expect(data.result.tools[2]!.description).toContain('Free tier');
+    expect(data.result.tools[0]!.description).toBe('Search across endpoints.');
   });
 
   it('patches plain JSON bodies', () => {
-    const patched = JSON.parse(patchToolsListText(JSON.stringify(toolsPayload), 'application/json'));
-    expect(patched.result.tools[1].description).toContain(QUICKSTART_URL);
+    const patched = JSON.parse(patchToolsListText(JSON.stringify(toolsPayload), 'application/json')) as typeof toolsPayload;
+    expect(patched.result.tools[1]!.description).toContain(QUICKSTART_URL);
   });
 
   it('leaves non-tools and malformed bodies untouched', () => {
