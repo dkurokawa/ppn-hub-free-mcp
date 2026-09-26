@@ -25,6 +25,8 @@
  * code, in case a future spec regeneration ever publishes them.
  */
 
+import { pathToFileURL } from 'node:url';
+
 export const EXCLUDES = {
   /** Whole APIs to drop, e.g. { api: 'x', reason: '...' } */
   apis: [],
@@ -193,7 +195,8 @@ async function main() {
     console.log(`⚠️ Wrote anyway with --allow-truncated. Possibly truncated APIs: ${maybeTruncated.join(', ')}`);
 }
 
-const isMain = import.meta.url === `file://${process.argv[1]}`;
+// pathToFileURL encodes spaces / non-ASCII the same way import.meta.url does.
+const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   main().catch((err) => {
     console.error(err);

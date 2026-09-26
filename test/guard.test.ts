@@ -121,6 +121,15 @@ describe('refundIpBudget', () => {
 });
 
 describe('consumeGlobalBudget / refundGlobalBudget — global daily cap (Durable Object, exact, fail-closed)', () => {
+  it('fails open when the Durable Object call throws, and a failed refund does not throw', async () => {
+    const broken = {
+      idFromName: (name: string) => name,
+      get: () => ({ fetch: () => Promise.reject(new Error('DO unavailable')) }),
+    } as unknown as Parameters<typeof consumeGlobalBudget>[0];
+    expect((await consumeGlobalBudget(broken, NOW, 1, GLOBAL_DAY_LIMIT)).allowed).toBe(true);
+    await expect(refundGlobalBudget(broken, NOW, 1)).resolves.toBeUndefined();
+  });
+
   it('allows and accumulates under the cap', async () => {
     const ns = makeFakeGlobalBudgetNamespace();
     for (let i = 0; i < 5; i++) {

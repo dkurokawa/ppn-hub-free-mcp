@@ -33,8 +33,9 @@
  * That is acceptable for coarse abuse limits — the per-minute Cloudflare
  * limiter bounds how far a racing client can stretch a window. Counter TTLs
  * are refreshed on every write, so the error/enum windows are sliding
- * approximations rather than exact tumbling windows. KV outages fail OPEN
- * (the minute limiter still applies); only budget exhaustion fails closed.
+ * approximations rather than exact tumbling windows. KV and Durable Object
+ * outages fail OPEN (the minute limiter still applies); only budget
+ * exhaustion fails closed.
  */
 
 /** Minimal KV surface used by the guards (subset of KVNamespace). */
@@ -160,25 +161,35 @@ export async function consumeGlobalBudget(
   globalDayLimit: number = DEFAULT_GLOBAL_DAY_LIMIT,
 ): Promise<GlobalBudgetResult> {
   if (units <= 0) return { allowed: true };
-  const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
-  const res = await stub.fetch('https://global-budget.internal/consume', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ day: dayStamp(now), units, limit: globalDayLimit }),
-  });
-  const body = await res.json<{ allowed: boolean }>();
-  return { allowed: body.allowed };
+  try {
+    const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
+    const res = await stub.fetch('https://global-budget.internal/consume', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ day: dayStamp(now), units, limit: globalDayLimit }),
+    });
+    const body = await res.json<{ allowed: boolean }>();
+    return { allowed: body.allowed };
+  } catch {
+    // DO outage / malformed reply: fail open, like a KV outage. Only a
+    // counter that answered "exhausted" closes the tier.
+    return { allowed: true };
+  }
 }
 
 /** Give back `units` previously charged to the global daily budget (upstream failure). */
 export async function refundGlobalBudget(ns: GlobalBudgetNamespaceLike, now: Date, units: number): Promise<void> {
   if (units <= 0) return;
-  const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
-  await stub.fetch('https://global-budget.internal/refund', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ day: dayStamp(now), units }),
-  });
+  try {
+    const stub = ns.get(ns.idFromName(GLOBAL_BUDGET_INSTANCE_NAME));
+    await stub.fetch('https://global-budget.internal/refund', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ day: dayStamp(now), units }),
+    });
+  } catch {
+    // best effort, like the per-IP refund
+  }
 }
 
 /**
