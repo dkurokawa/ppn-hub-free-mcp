@@ -2,13 +2,16 @@
  * ppn-hub-free-mcp — keyless read-only MCP entry point for PPN Hub.
  *
  * A thin proxy in front of the main gateway (mcp.ppn-hub.com/mcp):
- *   - initialize / tools/list / search_apis pass through anonymously
+ *   - initialize / ping / tools/list / search_apis pass through anonymously
  *     (tools/list descriptions are rewritten with the free-tier rules),
  *   - execute_api runs WITHOUT a key for allowlisted GET read endpoints —
  *     the proxy injects a dedicated free-tier ppn_live_* backend key,
- *   - everything else is rejected with a pointer to the quickstart,
- *   - per-IP minute + daily budgets, a global daily budget, and an abuse
- *     ban list keep the keyless surface bounded (see src/guard.ts).
+ *   - everything else is rejected: malformed / batched / off-allow-list
+ *     methods with a JSON-RPC protocol error, disallowed tool calls with a
+ *     tool-style error pointing at the quickstart,
+ *   - per-IP minute + daily budgets (approximate, KV), a global daily budget
+ *     (exact, Durable Object), and an abuse ban list keep the keyless
+ *     surface bounded (see src/guard.ts, src/global-budget.ts).
  *
  * Inbound Authorization headers are intentionally STRIPPED: this endpoint is
  * anonymous-only. Key holders should call mcp.ppn-hub.com/mcp directly.
@@ -20,23 +23,32 @@ import { isAllowed, allowlistMeta } from './allowlist.js';
 import {
   hashIp,
   isBanned,
-  consumeBudget,
+  checkIpBudget,
+  chargeIpBudget,
+  refundIpBudget,
+  consumeGlobalBudget,
+  refundGlobalBudget,
   recordDenied,
   recordApiSpread,
   DEFAULT_IP_DAY_LIMIT,
   DEFAULT_GLOBAL_DAY_LIMIT,
   type KvLike,
+  type GlobalBudgetNamespaceLike,
 } from './guard.js';
 import { inspectRpc, denyBody, patchToolsListText, QUICKSTART_URL, UPSTREAM_HINT } from './rpc.js';
+
+export { GlobalBudget } from './global-budget.js';
 
 /** Cloudflare-native rate limiter binding (GA `[[ratelimits]]`). */
 interface RateLimiter {
   limit(options: { key: string }): Promise<{ success: boolean }>;
 }
 
-export type Env = {
+export interface Env {
   FREE_KV?: KVNamespace;
   IP_RATE_LIMITER?: RateLimiter;
+  /** Enforces the shared global daily budget exactly (see src/global-budget.ts). */
+  GLOBAL_BUDGET?: DurableObjectNamespace;
   /** Dedicated free-tier ppn_live_* key (never a service/admin key). */
   FREE_TIER_BACKEND_KEY?: string;
   /** Random salt so client IPs never reach KV in the clear. */
@@ -44,7 +56,7 @@ export type Env = {
   UPSTREAM_MCP_URL?: string;
   FREE_IP_DAY_LIMIT?: string;
   FREE_GLOBAL_DAY_LIMIT?: string;
-};
+}
 
 export const app = new Hono<{ Bindings: Env }>();
 
@@ -95,11 +107,43 @@ function tooMany(c: Context, message: string, retryAfterSeconds?: number) {
   );
 }
 
+/** Refund units charged for a request whose upstream call failed. Fire-and-forget. */
+async function refundUnits(
+  kv: KvLike | undefined,
+  globalBudget: GlobalBudgetNamespaceLike | undefined,
+  ipHash: string,
+  units: number,
+  now: Date,
+): Promise<void> {
+  await Promise.all([
+    kv ? refundIpBudget(kv, ipHash, units, now) : Promise.resolve(),
+    globalBudget ? refundGlobalBudget(globalBudget, now, units) : Promise.resolve(),
+  ]);
+}
+
 app.post('/mcp', async (c) => {
   const env = c.env;
   const kv = env.FREE_KV as KvLike | undefined;
+  const globalBudget = env.GLOBAL_BUDGET as GlobalBudgetNamespaceLike | undefined;
+
+  // ── Fail closed if KV-backed guards are enabled but can't hash IPs safely ──
+  if (kv && !env.IP_HASH_SALT) {
+    return c.json(
+      {
+        success: false,
+        error: {
+          code: 'FREE_TIER_MISCONFIGURED',
+          message: 'The free tier is temporarily misconfigured. Try again later, or use a free ' +
+            `ppn_live_* key against ${UPSTREAM_HINT}: ${QUICKSTART_URL}`,
+          status: 503,
+        },
+      },
+      503,
+    );
+  }
+
   const ip = c.req.header('CF-Connecting-IP') ?? 'unknown';
-  const ipHash = kv ? await hashIp(ip, env.IP_HASH_SALT ?? 'unsalted-dev') : '';
+  const ipHash = kv && env.IP_HASH_SALT ? await hashIp(ip, env.IP_HASH_SALT) : '';
 
   // ── Layer 0: temp ban list ──
   if (kv && (await isBanned(kv, ipHash))) {
@@ -127,7 +171,7 @@ app.post('/mcp', async (c) => {
     }
   }
 
-  // ── JSON-RPC inspection (read-only allowlist, batches included) ──
+  // ── JSON-RPC inspection (protocol-level: batches / unknown methods / malformed) ──
   let payload: unknown;
   try {
     payload = await c.req.json();
@@ -139,6 +183,10 @@ app.post('/mcp', async (c) => {
   }
   const decision = inspectRpc(payload, isAllowed);
 
+  if (decision.kind === 'protocol-error') {
+    return c.json(decision.body, decision.status);
+  }
+
   if (decision.kind === 'deny') {
     if (kv) {
       c.executionCtx.waitUntil(recordDenied(kv, ipHash));
@@ -149,21 +197,36 @@ app.post('/mcp', async (c) => {
     return c.json(denyBody(decision.id, decision.message));
   }
 
-  // ── Layer 2+3: daily budgets (per-IP, then global fail-closed) ──
+  // ── Layer 2+3: daily budgets — per-IP (KV, approximate) checked first, then
+  //    the global cap (Durable Object, exact, fail-closed). Only once both
+  //    agree is the per-IP counter actually charged (see guard.ts). ──
+  const now = new Date();
+  let chargedUnits = 0;
   if (kv && decision.units > 0) {
-    const budget = await consumeBudget(kv, ipHash, decision.units, new Date(), {
-      ipDay: intVar(env.FREE_IP_DAY_LIMIT, DEFAULT_IP_DAY_LIMIT),
-      globalDay: intVar(env.FREE_GLOBAL_DAY_LIMIT, DEFAULT_GLOBAL_DAY_LIMIT),
-    });
-    if (!budget.allowed) {
-      const message =
-        budget.scope === 'ip'
-          ? `Free tier daily budget exhausted for this IP (resets at 00:00 UTC). Get a free ` +
-            `ppn_live_* key for higher limits: ${QUICKSTART_URL}`
-          : `The shared free tier is fully used for today (resets at 00:00 UTC). Get a free ` +
-            `ppn_live_* key for uninterrupted access: ${QUICKSTART_URL}`;
-      return tooMany(c, message);
+    const ipDayLimit = intVar(env.FREE_IP_DAY_LIMIT, DEFAULT_IP_DAY_LIMIT);
+    const ipCheck = await checkIpBudget(kv, ipHash, decision.units, now, ipDayLimit);
+    if (!ipCheck.allowed) {
+      return tooMany(
+        c,
+        `Free tier daily budget exhausted for this IP (resets at 00:00 UTC). Get a free ` +
+          `ppn_live_* key for higher limits: ${QUICKSTART_URL}`,
+      );
     }
+
+    if (globalBudget) {
+      const globalDayLimit = intVar(env.FREE_GLOBAL_DAY_LIMIT, DEFAULT_GLOBAL_DAY_LIMIT);
+      const globalCheck = await consumeGlobalBudget(globalBudget, now, decision.units, globalDayLimit);
+      if (!globalCheck.allowed) {
+        return tooMany(
+          c,
+          `The shared free tier is fully used for today (resets at 00:00 UTC). Get a free ` +
+            `ppn_live_* key for uninterrupted access: ${QUICKSTART_URL}`,
+        );
+      }
+    }
+
+    await chargeIpBudget(kv, ipHash, decision.units, now);
+    chargedUnits = decision.units;
   }
   if (kv && decision.apisTouched.length > 0) {
     c.executionCtx.waitUntil(recordApiSpread(kv, ipHash, decision.apisTouched));
@@ -190,14 +253,32 @@ app.post('/mcp', async (c) => {
         503,
       );
     }
-    headers['authorization'] = `Bearer ${env.FREE_TIER_BACKEND_KEY}`;
+    headers.authorization = `Bearer ${env.FREE_TIER_BACKEND_KEY}`;
   }
 
-  const upstream = await fetch(env.UPSTREAM_MCP_URL ?? UPSTREAM_HINT, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(env.UPSTREAM_MCP_URL ?? UPSTREAM_HINT, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    if (chargedUnits > 0) {
+      c.executionCtx.waitUntil(refundUnits(kv, globalBudget, ipHash, chargedUnits, now));
+    }
+    return c.json(
+      {
+        success: false,
+        error: { code: 'UPSTREAM_UNAVAILABLE', message: 'The upstream gateway is unreachable.', status: 502 },
+      },
+      502,
+    );
+  }
+
+  if (upstream.status >= 500 && chargedUnits > 0) {
+    c.executionCtx.waitUntil(refundUnits(kv, globalBudget, ipHash, chargedUnits, now));
+  }
 
   const contentType = upstream.headers.get('content-type') ?? 'application/json';
   if (decision.patchToolsList && upstream.ok) {
