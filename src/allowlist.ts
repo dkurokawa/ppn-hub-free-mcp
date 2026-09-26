@@ -11,11 +11,17 @@ export interface AllowlistEntry {
   api: string;
   operationId: string;
   path: string;
+  method: string;
 }
 
-const allowed: ReadonlySet<string> = new Set(
-  (allowlist.allow as AllowlistEntry[]).map((e) => `${e.api}:${e.operationId}`),
-);
+/**
+ * Only entries recorded as GET make it into the lookup set — defense in
+ * depth against allowlist.json ever being hand-edited or regenerated with a
+ * non-GET row, on top of gen-allowlist.mjs only ever emitting GET rows.
+ */
+const getEntries: AllowlistEntry[] = (allowlist.allow as AllowlistEntry[]).filter((e) => e.method === 'GET');
+
+const allowed: ReadonlySet<string> = new Set(getEntries.map((e) => `${e.api}:${e.operationId}`));
 
 /** True when the free tier may execute this operation without a key. */
 export function isAllowed(api: string, operationId: string): boolean {
@@ -28,10 +34,10 @@ export function allowlistSize(): number {
 
 /** Metadata echoed on the landing route so the deployed list is auditable. */
 export function allowlistMeta(): { generated_at: string; apis: number; endpoints: number } {
-  const apis = new Set((allowlist.allow as AllowlistEntry[]).map((e) => e.api));
+  const apis = new Set(getEntries.map((e) => e.api));
   return {
-    generated_at: allowlist.generated_at as string,
+    generated_at: allowlist.generated_at,
     apis: apis.size,
-    endpoints: allowed.size,
+    endpoints: getEntries.length,
   };
 }
