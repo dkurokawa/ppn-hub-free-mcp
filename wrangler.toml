@@ -30,7 +30,7 @@ simple = { limit = 10, period = 60 }
 #   pnpm exec wrangler kv namespace create FREE_KV
 [[kv_namespaces]]
 binding = "FREE_KV"
-id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
+id = "e4a510403ad943588f08fbd23d42c50c" # production-FREE_KV
 
 # Durable Object: the shared global daily budget, enforced exactly (see
 # src/global-budget.ts). A single instance backs the whole Worker.
@@ -63,7 +63,7 @@ simple = { limit = 10, period = 60 }
 
 [[env.production.kv_namespaces]]
 binding = "FREE_KV"
-id = "00000000000000000000000000000000" # TODO(deploy): replace with the real namespace id
+id = "e4a510403ad943588f08fbd23d42c50c" # production-FREE_KV
 
 [[env.production.durable_objects.bindings]]
 name = "GLOBAL_BUDGET"
