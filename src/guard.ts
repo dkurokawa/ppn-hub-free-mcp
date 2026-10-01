@@ -168,10 +168,13 @@ export async function consumeGlobalBudget(
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ day: dayStamp(now), units, limit: globalDayLimit }),
     });
-    const body = await res.json<{ allowed: boolean }>();
-    return { allowed: body.allowed };
+    const body = await res.json<{ allowed?: unknown }>();
+    // Only an explicit `allowed: false` closes the tier. A reply that parses
+    // but lacks the field (the DO's own 400 `{ error }`, or `{}`) is a
+    // malformed reply, not "exhausted", so it falls open like the catch below.
+    return { allowed: body.allowed !== false };
   } catch {
-    // DO outage / malformed reply: fail open, like a KV outage. Only a
+    // DO outage / unparseable reply: fail open, like a KV outage. Only a
     // counter that answered "exhausted" closes the tier.
     return { allowed: true };
   }
