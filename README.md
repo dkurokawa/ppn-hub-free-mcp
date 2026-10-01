@@ -47,6 +47,12 @@ When you hit a limit you get a `429` with a pointer to the quickstart.
 Abusive patterns (operation brute-forcing, endpoint enumeration sweeps) earn
 a temporary 24h block. Client IPs are stored only as salted SHA-256 hashes.
 
+## Diagram
+
+![architecture](docs/architecture.svg)
+
+The free entry point is a thin proxy Worker. It applies the ban list and limits, inspects each JSON-RPC request, injects a dedicated free-tier backend key, and forwards the request to the main gateway (private repo). Rejected requests get a 429 with a link to a free key, or a JSON-RPC error.
+
 ## How it works (architecture)
 
 This repo is a **thin proxy Worker** — Hono only, a handful of small source
