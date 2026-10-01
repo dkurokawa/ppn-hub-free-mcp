@@ -65,6 +65,12 @@ simple = { limit = 10, period = 60 }
 binding = "FREE_KV"
 id = "e4a510403ad943588f08fbd23d42c50c" # production-FREE_KV
 
+# Service binding to the main gateway. mcp.ppn-hub.com is a zone route on the
+# same zone, and a plain fetch() to it from here goes to the origin (522).
+[[env.production.services]]
+binding = "UPSTREAM"
+service = "mcp-gateway-production"
+
 [[env.production.durable_objects.bindings]]
 name = "GLOBAL_BUDGET"
 class_name = "GlobalBudget"

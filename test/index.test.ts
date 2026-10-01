@@ -112,6 +112,19 @@ describe('POST /mcp — anonymous methods and key injection', () => {
     expect((init.headers as Record<string, string>).authorization).toBeUndefined();
   });
 
+  it('calls the upstream through the UPSTREAM service binding when one is bound', async () => {
+    const globalFetch = vi.spyOn(globalThis, 'fetch');
+    const bound = vi.fn(() => Promise.resolve(jsonResponse({ jsonrpc: '2.0', id: 1, result: {} })));
+    const env = { ...makeEnv({ backendKey: 'ppn_live_abc123' }), UPSTREAM: { fetch: bound } } as unknown as Env; // gitleaks:allow — test dummy
+    const res = await postMcp(env, toolCall('execute_api', { api: 'onokoro', operationId: 'getElevation' }));
+    expect(res.status).toBe(200);
+    expect(globalFetch).not.toHaveBeenCalled();
+    expect(bound).toHaveBeenCalledTimes(1);
+    const [url, init] = bound.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://mcp.ppn-hub.com/mcp');
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer ppn_live_abc123');
+  });
+
   it('injects the backend key for an allowlisted execute_api call', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ jsonrpc: '2.0', id: 1, result: {} }));
     const res = await postMcp(
