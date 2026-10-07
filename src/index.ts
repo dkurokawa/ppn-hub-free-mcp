@@ -173,8 +173,10 @@ app.post('/mcp', async (c) => {
           60,
         );
       }
-    } catch {
-      // limiter outage: fail open (daily budgets still apply)
+    } catch (err) {
+      // limiter outage: fail open (daily budgets still apply), but say so — a
+      // silent fail-open looks exactly like a limiter that works.
+      console.warn('ip rate limiter failed open:', err instanceof Error ? err.name + ': ' + err.message : 'unknown error');
     }
   }
 
