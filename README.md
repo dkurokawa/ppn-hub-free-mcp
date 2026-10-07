@@ -32,10 +32,14 @@ claude mcp add --transport http ppn-free https://mcp-free.ppn-hub.com/mcp
 
 | Limit                    | Value                                      | Accounting                       |
 | ------------------------ | ------------------------------------------- | --------------------------------- |
-| Per IP, burst            | 10 requests / minute                       | Cloudflare-native rate limiter    |
+| Per IP, burst            | 10 requests / minute                       | **Approximate** — Cloudflare-native rate limiter |
 | Per IP, daily            | 100 units / day (UTC)                      | **Approximate** — KV, best-effort |
 | Shared global cap        | 5,000 units / day — last-resort abuse cap  | **Exact** — Durable Object        |
 | `environment_brief` cost | 10 units per call                          | —                                  |
+
+The burst limiter is Cloudflare's native one, which counts per location and
+catches up with a delay, so it is loose: in a test, 60 requests in about nine
+seconds drew two 429s. The daily budgets below it are what bound the cost.
 
 Regular requests cost 1 unit (`initialize`/`ping`/`tools/list` are free). The
 per-IP counter lives in KV: reads and writes aren't atomic, so a racing
@@ -46,6 +50,16 @@ so there's no equivalent race there, and it fails **closed** on exhaustion.
 When you hit a limit you get a `429` with a pointer to the quickstart.
 Abusive patterns (operation brute-forcing, endpoint enumeration sweeps) earn
 a temporary 24h block. Client IPs are stored only as salted SHA-256 hashes.
+
+### What is never keyless
+
+This entry point injects one backend key for every caller, so an endpoint that
+answers about *the caller* would answer about the key's owner. Those are never
+in the allowlist, whatever account the key belongs to: accounts, usage and
+licenses, keys and tokens, admin and console pages, sign-in, logs, projects,
+per-player game data, and whole APIs that hold per-user data (see `EXCLUDES` in
+`scripts/gen-allowlist.mjs`). A test fails if the committed `allowlist.json`
+contains any of them.
 
 ## Diagram
 

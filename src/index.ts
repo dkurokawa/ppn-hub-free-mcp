@@ -54,6 +54,13 @@ export interface Env {
   /** Random salt so client IPs never reach KV in the clear. */
   IP_HASH_SALT?: string;
   UPSTREAM_MCP_URL?: string;
+  /**
+   * Service binding to the main gateway Worker. When the gateway is served by a
+   * zone route on the same zone as this Worker, a plain fetch() to its hostname
+   * skips the route and goes to the origin (522), so production calls it through
+   * this binding. Without it (local dev, tests) the URL above is fetched.
+   */
+  UPSTREAM?: Fetcher;
   FREE_IP_DAY_LIMIT?: string;
   FREE_GLOBAL_DAY_LIMIT?: string;
 }
@@ -166,8 +173,10 @@ app.post('/mcp', async (c) => {
           60,
         );
       }
-    } catch {
-      // limiter outage: fail open (daily budgets still apply)
+    } catch (err) {
+      // limiter outage: fail open (daily budgets still apply), but say so — a
+      // silent fail-open looks exactly like a limiter that works.
+      console.warn('ip rate limiter failed open:', err instanceof Error ? err.name + ': ' + err.message : 'unknown error');
     }
   }
 
@@ -268,11 +277,9 @@ app.post('/mcp', async (c) => {
 
   let upstream: Response;
   try {
-    upstream = await fetch(env.UPSTREAM_MCP_URL ?? UPSTREAM_HINT, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
+    const init = { method: 'POST', headers, body: JSON.stringify(payload) };
+    const url = env.UPSTREAM_MCP_URL ?? UPSTREAM_HINT;
+    upstream = env.UPSTREAM ? await env.UPSTREAM.fetch(url, init) : await fetch(url, init);
   } catch {
     if (chargedUnits > 0) {
       c.executionCtx.waitUntil(refundUnits(kv, globalBudget, ipHash, chargedUnits, now));
