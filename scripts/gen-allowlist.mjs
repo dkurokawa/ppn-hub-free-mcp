@@ -27,13 +27,48 @@
 
 import { pathToFileURL } from 'node:url';
 
+/**
+ * Caller-scoped endpoints. The proxy injects ONE backend key for every keyless
+ * caller, so an endpoint that answers about "the caller" (its account, usage,
+ * keys, projects, logs, ...) would hand the key owner's data to anyone. These
+ * are never keyless, whatever account the backend key belongs to.
+ * (2026-10-01: onokoro getAccount returned the key owner's e-mail this way.)
+ */
+const CALLER_SCOPED = 'caller-scoped: answers about the key owner, never keyless';
+export const CALLER_SCOPED_SEGMENT =
+  /(^|\/)(accounts?|me|profiles?|users?|usage|quotas?|licen[cs]es?|billing|subscriptions?|invoices?|payments?|api-keys|keys|tokens?|console|admin|auth|oauth|sessions?|logs?|care-logs|projects?|webhooks?|teams?|members?|settings|favorites|bookmarks|orders?|cart|batch|jobs?)(\/|\.|$)/i;
+export const CALLER_SCOPED_OPERATION =
+  /(Account|CurrentUser|Profile|Usage|Quota|Licen[cs]e|Billing|Subscription|Invoice|ApiKey|Keys|Token|Console|Admin|Auth|Oauth|Session|Logs?\b|Log(Stats|s)|Project|Webhook)/;
+
 export const EXCLUDES = {
   /** Whole APIs to drop, e.g. { api: 'x', reason: '...' } */
-  apis: [],
+  apis: [
+    { api: 'nanobase-api', reason: 'per-user data platform (console, projects, keys) — ' + CALLER_SCOPED },
+    { api: 'ppn-hub-workers', reason: 'the hub itself (console, usage, sign-in) — ' + CALLER_SCOPED },
+    { api: 'sakurahub-web', reason: 'web sign-in flow, not data — ' + CALLER_SCOPED },
+    { api: 'nishinoshima-gateway-production', reason: 'game state — ' + CALLER_SCOPED },
+    {
+      api: 'green-path-api',
+      reason: "plant-care app: plants, farms, inventory and reminders are the key owner's — " + CALLER_SCOPED,
+    },
+    { api: 'sla-viewer-production', reason: "per-customer SLA dashboard data — " + CALLER_SCOPED },
+  ],
+  /** API-name patterns to drop: { pattern (RegExp), reason } */
+  apiPatterns: [
+    { pattern: /console/i, reason: 'console app — ' + CALLER_SCOPED },
+    {
+      pattern: /^nanosnap-/,
+      reason: "game backend: every record belongs to the key's project — " + CALLER_SCOPED,
+    },
+  ],
   /** Exact operations to drop: { api, operationId, reason } */
   operations: [],
+  /** operationId patterns to drop: { pattern (RegExp), reason } */
+  operationPatterns: [{ pattern: CALLER_SCOPED_OPERATION, reason: CALLER_SCOPED }],
   /** Path patterns to drop: { api ('*' = any), pattern (RegExp), reason } */
   paths: [
+    { api: '*', pattern: CALLER_SCOPED_SEGMENT, reason: CALLER_SCOPED },
+    { api: '*', pattern: /\{player[_-]?id\}/i, reason: 'per-player history — ' + CALLER_SCOPED },
     {
       api: 'green-path-api',
       pattern: /\/paper-tips/,
@@ -106,8 +141,14 @@ export function isExcluded(entry, excludes = EXCLUDES) {
   for (const e of excludes.apis) {
     if (e.api === entry.api) return e.reason;
   }
+  for (const e of excludes.apiPatterns ?? []) {
+    if (e.pattern.test(entry.api)) return e.reason;
+  }
   for (const e of excludes.operations) {
     if (e.api === entry.api && e.operationId === entry.operationId) return e.reason;
+  }
+  for (const e of excludes.operationPatterns ?? []) {
+    if (e.pattern.test(entry.operationId)) return e.reason;
   }
   for (const e of excludes.paths) {
     if ((e.api === '*' || e.api === entry.api) && e.pattern.test(entry.path)) return e.reason;

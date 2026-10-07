@@ -114,3 +114,43 @@ describe('buildDoc', () => {
     expect(doc.endpoint_count).toBe(0);
   });
 });
+
+describe('caller-scoped endpoints are never keyless (2026-10-01 incident)', () => {
+  // The proxy injects one backend key for every caller, so anything that answers
+  // about "the caller" would hand the key owner's data to anyone.
+  const leaked = [
+    { api: 'onokoro', operationId: 'getAccount', path: '/api/account' },
+    { api: 'onokoro', operationId: 'getSecurityAuditHistory', path: '/api/admin/security-audit/history' },
+    { api: 'hydrogen', operationId: 'getUsage', path: '/v1/usage' },
+    { api: 'terra', operationId: 'getLicenseUsage', path: '/api/v1/license/usage' },
+    { api: 'green-path-api', operationId: 'listCareLogs', path: '/v1/care-logs' },
+    { api: 'renewio', operationId: 'getProjectsList', path: '/api/v1/projects/list' },
+    { api: 'nanobase-api', operationId: 'listRecords', path: '/v1/data/{collection}' },
+    { api: 'nanosnap-replay-production', operationId: 'listRecordings', path: '/v1/recordings' },
+    { api: 'nanosnap-save-data-production', operationId: 'getSave', path: '/v1/saves/{playerId}/{slot}' },
+    { api: 'ppn-hub-workers', operationId: 'getCatalogJson', path: '/catalog.json' },
+    { api: 'foodsense', operationId: 'getBatchStatusJobId', path: '/api/v1/batch/status/{jobId}' },
+    { api: 'anything', operationId: 'getCurrentUser', path: '/v1/whoami' },
+  ];
+  it.each(leaked)('excludes $api:$operationId', (e) => {
+    expect(isExcluded({ ...e, method: 'GET' })).toMatch(/caller-scoped/);
+  });
+
+  const publicData = [
+    { api: 'onokoro', operationId: 'getElevation', path: '/api/v1/elevation' },
+    { api: 'atmos', operationId: 'listAirQualityHistory', path: '/api/v1/history/air-quality' },
+    { api: 'celestora', operationId: 'listStars', path: '/api/v1/catalog/stars' },
+    { api: 'weathio', operationId: 'getAmedasHistory', path: '/api/v1/amedas/history/{station_id}' },
+  ];
+  it.each(publicData)('keeps public data $api:$operationId', (e) => {
+    expect(isExcluded({ ...e, method: 'GET' })).toBeNull();
+  });
+
+  it('the committed allowlist.json contains no caller-scoped entry', async () => {
+    const { default: doc } = await import('../allowlist.json');
+    const offenders = (doc.allow as { api: string; operationId: string; path: string; method: string }[])
+      .filter((e) => isExcluded(e) !== null)
+      .map((e) => `${e.api}:${e.operationId} ${e.path}`);
+    expect(offenders).toEqual([]);
+  });
+});
